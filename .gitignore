@@ -9,8 +9,4 @@
 ### VS Code ###
 .vscode/
 
-/Local
-/FlowPluginsTs/LocalFlowPlugins
-/FlowPlugins/LocalFlowPlugins
-
 .env

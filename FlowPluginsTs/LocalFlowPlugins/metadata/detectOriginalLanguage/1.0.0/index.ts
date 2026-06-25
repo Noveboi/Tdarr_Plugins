@@ -4,10 +4,10 @@ import {
   IpluginInputArgs,
   IpluginOutputArgs,
 } from '../../../../FlowHelpers/1.0.0/interfaces/interfaces';
-import { ArrClient } from '../../../arr';
-import { ParsedMediaInfo, parseMediaPath } from '../../../parser';
-import { RadarrClient } from '../../../radarr';
-import { SonarrClient } from '../../../sonarr';
+import { ArrClient } from '../../../../../methods/nove/arr';
+import { ParsedMediaInfo, parseMediaPath } from '../../../../../methods/nove/parser';
+import { RadarrClient } from '../../../../../methods/nove/radarr';
+import { SonarrClient } from '../../../../../methods/nove/sonarr';
 
 const OUT_SUCCESS = 1;
 const OUT_FAIL = 2;
