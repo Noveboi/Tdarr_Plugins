@@ -12,3 +12,5 @@
 /Local
 /FlowPluginsTs/LocalFlowPlugins
 /FlowPlugins/LocalFlowPlugins
+
+.env

@@ -1,7 +1,7 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  roots: ['<rootDir>/tests/FlowPlugins'],
+  roots: ['<rootDir>/tests/FlowPlugins', '<rootDir>/tests/NovePlugins'],
   testMatch: ['**/*.test.ts'],
   transform: {
     '^.+\\.ts$': ['ts-jest', { useESM: false }],

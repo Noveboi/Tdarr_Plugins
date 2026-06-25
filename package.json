@@ -6,7 +6,8 @@
   "dependencies": {
     "chalk": "^4.1.2",
     "import-fresh": "^3.3.0",
-    "lodash": "^4.17.21"
+    "lodash": "^4.17.21",
+    "tmdb-ts": "^2.3.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
@@ -27,6 +28,7 @@
   "scripts": {
     "test": "node ./tests/runTests.js",
     "test:flows": "jest",
+    "test:nove": "jest tests/NovePlugins",
     "lint": "eslint_d FlowPluginsTs Community methods examples tests --ext js,ts",
     "lint:fix": "eslint_d FlowPluginsTs Community methods examples tests --ext js,ts --fix",
     "checkPlugins": "node ./tests/checkPlugins.js"
