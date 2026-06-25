@@ -37,9 +37,9 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.details = exports.plugin = void 0;
-var parser_1 = require("../../../../../methods/nove/parser");
-var radarr_1 = require("../../../../../methods/nove/radarr");
-var sonarr_1 = require("../../../../../methods/nove/sonarr");
+var parser_1 = require("../../../parser");
+var radarr_1 = require("../../../radarr");
+var sonarr_1 = require("../../../sonarr");
 var OUT_SUCCESS = 1;
 var OUT_FAIL = 2;
 var details = function () { return ({
