@@ -37,9 +37,9 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.details = exports.plugin = void 0;
-var parser_1 = require("../../../../FlowHelpers/1.0.0/parser");
-var radarr_1 = require("../../../../FlowHelpers/1.0.0/radarr");
-var sonarr_1 = require("../../../../FlowHelpers/1.0.0/sonarr");
+var parser_1 = require("../../../../FlowHelpers/1.0.0/nove/parser");
+var radarr_1 = require("../../../../FlowHelpers/1.0.0/nove/radarr");
+var sonarr_1 = require("../../../../FlowHelpers/1.0.0/nove/sonarr");
 var OUT_SUCCESS = 1;
 var OUT_FAIL = 2;
 var details = function () { return ({
