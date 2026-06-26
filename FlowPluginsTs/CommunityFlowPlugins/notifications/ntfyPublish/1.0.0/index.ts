@@ -8,7 +8,6 @@ import { NtfyClient, NtfyPriority } from '../../../../FlowHelpers/1.0.0/nove/ntf
 import { enumParser } from '../../../../FlowHelpers/1.0.0/nove/utils';
 
 const OUT_SUCCESS = 1;
-const OUT_FAIL = 2;
 
 const details = (): IpluginDetails => ({
   name: 'Publish ntfy.sh Notification',
@@ -93,11 +92,7 @@ const details = (): IpluginDetails => ({
   outputs: [
     {
       number: OUT_SUCCESS,
-      tooltip: 'The original language was detected.',
-    },
-    {
-      number: OUT_FAIL,
-      tooltip: 'The original was not detected',
+      tooltip: 'The notification was published.',
     },
   ],
 });

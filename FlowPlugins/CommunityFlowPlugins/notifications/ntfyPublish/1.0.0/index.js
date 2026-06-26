@@ -119,11 +119,7 @@ var details = function () { return ({
     outputs: [
         {
             number: OUT_SUCCESS,
-            tooltip: 'The original language was detected.',
-        },
-        {
-            number: OUT_FAIL,
-            tooltip: 'The original was not detected',
+            tooltip: 'The notification was published.',
         },
     ],
 }); };
