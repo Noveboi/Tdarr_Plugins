@@ -40,7 +40,6 @@ exports.details = exports.plugin = void 0;
 var ntfy_1 = require("../../../../FlowHelpers/1.0.0/nove/ntfy");
 var utils_1 = require("../../../../FlowHelpers/1.0.0/nove/utils");
 var OUT_SUCCESS = 1;
-var OUT_FAIL = 2;
 var details = function () { return ({
     name: 'Publish ntfy.sh Notification',
     description: 'Publish a notification through the ntfy.sh API.',

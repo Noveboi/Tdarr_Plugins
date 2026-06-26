@@ -29,7 +29,7 @@ const details = (): IpluginDetails => ({
       label: 'Language Variable',
       name: 'langVariable',
       type: 'string',
-      defaultValue: 'original_language',
+      defaultValue: 'originalLanguage',
       inputUI: {
         type: 'text',
       },
@@ -133,6 +133,7 @@ const plugin = async (args: IpluginInputArgs): Promise<IpluginOutputArgs> => {
   }
 
   args.variables.user[variableName] = languageCode.ffmpegCode;
+  args.variables.user[`${variableName}Full`] = languageCode.name;
 
   return {
     outputFileObj: args.inputFileObj,

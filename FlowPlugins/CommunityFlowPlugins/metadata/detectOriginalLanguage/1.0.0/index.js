@@ -58,7 +58,7 @@ var details = function () { return ({
             label: 'Language Variable',
             name: 'langVariable',
             type: 'string',
-            defaultValue: 'original_language',
+            defaultValue: 'originalLanguage',
             inputUI: {
                 type: 'text',
             },
@@ -148,6 +148,7 @@ var plugin = function (args) { return __awaiter(void 0, void 0, void 0, function
                         }];
                 }
                 args.variables.user[variableName] = languageCode.ffmpegCode;
+                args.variables.user["".concat(variableName, "Full")] = languageCode.name;
                 return [2 /*return*/, {
                         outputFileObj: args.inputFileObj,
                         outputNumber: OUT_SUCCESS,
