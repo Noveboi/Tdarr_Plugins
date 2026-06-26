@@ -64,7 +64,7 @@
     "./node_modules/@types/express/index.d.ts"
   ],
   "exclude": [
-    "tests/FlowPlugins",
-    "tests/NovePlugins"
+    "node_modules",
+    "tests",
   ]
 }

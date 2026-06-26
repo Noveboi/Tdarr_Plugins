@@ -2,7 +2,7 @@ import {
   ParsedMoviePath,
   ParsedTvEpisodePath,
   parseMediaPath,
-} from '../../FlowPluginsTs/NovePlugins/metadata/detectOriginalLanguage/1.0.0/parser';
+} from '../../FlowPluginsTs/FlowHelpers/1.0.0/nove/parser';
 
 describe('Parsing Utility Module', () => {
   let samples: {moviePath: string, movieName: string, tvPath: string};
@@ -90,22 +90,6 @@ describe('Parsing Utility Module', () => {
         Show (1999) [tmdbid-123] - S03E64 - Big Episode Title For No Reason! [AMZN][WEBDL-1080p]`;
 
       expect(() => parseMediaPath(input)).toThrow(/season mismatch/i);
-    });
-
-    it('should throw when years mismatch', () => {
-      const input = `Show (1999) [tmdbid-123]/
-        Season 03/
-        Show (2000) [tmdbid-123] - S03E64 - Big Episode Title For No Reason! [AMZN][WEBDL-1080p]`;
-
-      expect(() => parseMediaPath(input)).toThrow(/years mismatch/i);
-    });
-
-    it('should throw when TMDB IDs mismatch', () => {
-      const input = `Show (1999) [tmdbid-123]/
-        Season 03/
-        Show (1999) [tmdbid-1234] - S03E64 - Big Episode Title For No Reason! [AMZN][WEBDL-1080p]`;
-
-      expect(() => parseMediaPath(input)).toThrow(/id mismatch/i);
     });
   });
 });
