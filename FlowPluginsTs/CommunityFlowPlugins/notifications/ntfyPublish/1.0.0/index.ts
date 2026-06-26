@@ -53,7 +53,7 @@ const details = (): IpluginDetails => ({
       type: 'string',
       defaultValue: '',
       inputUI: {
-        type: 'text',
+        type: 'textarea',
       },
       tooltip: 'The notification body',
     },
