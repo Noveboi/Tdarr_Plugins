@@ -1,6 +1,6 @@
 /* eslint-disable no-param-reassign */
 import { IffmpegCommandStream, IpluginDetails } from '../../../../FlowHelpers/1.0.0/interfaces/interfaces';
-import ffMpegCommandPlugin from '../../../../FlowHelpers/1.0.0/nove/ffmpeg';
+import { isValidLanguageCode, ffMpegCommandPlugin } from '../../../../FlowHelpers/1.0.0/nove/ffmpeg';
 
 const OUT_SUCCESS = 1;
 const OUT_FAIL = 2;
@@ -42,7 +42,6 @@ const details = () :IpluginDetails => ({
   ],
 });
 
-const invalidLanguageCode = (code: string): boolean => code.length !== 3;
 const hasWantedLanguage = (stream: IffmpegCommandStream, languages: string[]): boolean => {
   if (stream.tags?.language === undefined) {
     return false;
@@ -61,7 +60,7 @@ const plugin = ffMpegCommandPlugin(details, (args) => {
     throw new Error('Languages are empty. Specify at least one language');
   }
 
-  const invalidLanguages = languages.filter(invalidLanguageCode);
+  const invalidLanguages = languages.filter((lang) => !isValidLanguageCode(lang));
   if (invalidLanguages.length > 0) {
     throw new Error(`Languages [${invalidLanguages.join(', ')}] are invalid codes for ffmpeg`);
   }
