@@ -10,7 +10,7 @@ type Err<E> = {
   readonly value?: never;
 };
 
-export type Result<T, E = string> = Ok<T> | Err<E>;
+export type Result<T = void, E = string> = Ok<T> | Err<E>;
 export type AsyncResult<T, E = string> = Promise<Result<T, E>>
 
 export const ok = <T>(value: T): Ok<T> => ({
