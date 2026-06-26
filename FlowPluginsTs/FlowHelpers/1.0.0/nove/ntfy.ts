@@ -2,16 +2,24 @@
 ntfy.sh utility module
 */
 
-import { err, ok, Result } from './types';
+export const NtfyPriority = {
+  MAX: 'max',
+  HIGH: 'high',
+  DEFAULT: 'default',
+  LOW: 'low',
+  MIN: 'min',
+} as const;
 
-interface NtfyMessage {
+export type NtfyPriority = typeof NtfyPriority[keyof typeof NtfyPriority];
+
+export interface NtfyMessage {
   body: string
   title?: string
-  priority?: 'max' | 'high' | 'default' | 'low' | 'min'
+  priority?: NtfyPriority
   tags?: string[]
 }
 
-class NtfyClient {
+export class NtfyClient {
   private readonly url: string;
 
   constructor(url: string) {
@@ -25,15 +33,15 @@ class NtfyClient {
   private getHeaders(message: NtfyMessage): HeadersInit {
     const headers: Record<string, string> = {};
 
-    if (message.title !== undefined) {
+    if (message.title) {
       headers.Title = message.title;
     }
 
-    if (message.priority !== undefined) {
+    if (message.priority) {
       headers.Priority = message.priority;
     }
 
-    if (message.tags !== undefined) {
+    if (message.tags) {
       headers.Tags = message.tags.join(',');
     }
 
