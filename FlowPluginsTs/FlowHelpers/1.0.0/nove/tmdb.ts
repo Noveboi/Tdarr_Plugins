@@ -1,15 +1,9 @@
 import { MovieDetails, TMDB, TvShowDetails } from 'tmdb-ts';
 import {
-  AsyncResult,
   err, ok, Result, TMDBId,
 } from './types';
 
-interface ITMDBService {
-  getMovieById(id: TMDBId): AsyncResult<MovieDetails>
-  getTvShowById(id: TMDBId): AsyncResult<TvShowDetails>
-}
-
-class TMDBService implements ITMDBService {
+class TMDBService {
   private readonly tmdb: TMDB;
 
   constructor(token: string) {
@@ -61,4 +55,4 @@ const extractId = (fileName: string): Result<TMDBId> => {
   return ok(idAsNumber);
 };
 
-export { ITMDBService, TMDBService, extractId as parseId };
+export { TMDBService, extractId as parseId };
