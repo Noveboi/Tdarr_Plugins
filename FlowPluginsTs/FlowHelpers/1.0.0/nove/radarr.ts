@@ -5,7 +5,7 @@ import {
   err, ok, Result, TMDBId,
 } from './types';
 
-export const RADARR_LANGUAGE_ID_TO_FFMPEG: Record<number, ArrFfmpegLanguage> = {
+const RADARR_LANGUAGE_ID_TO_FFMPEG: Record<number, ArrFfmpegLanguage> = {
   [-2]: { name: 'Original', ffmpegCode: null },
   [-1]: { name: 'Any', ffmpegCode: null },
   0: { name: 'Unknown', ffmpegCode: 'und' },
