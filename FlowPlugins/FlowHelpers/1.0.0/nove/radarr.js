@@ -37,9 +37,9 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RadarrClient = exports.RADARR_LANGUAGE_ID_TO_FFMPEG = void 0;
+exports.RadarrClient = void 0;
 var types_1 = require("./types");
-exports.RADARR_LANGUAGE_ID_TO_FFMPEG = (_a = {},
+var RADARR_LANGUAGE_ID_TO_FFMPEG = (_a = {},
     _a[-2] = { name: 'Original', ffmpegCode: null },
     _a[-1] = { name: 'Any', ffmpegCode: null },
     _a[0] = { name: 'Unknown', ffmpegCode: 'und' },
@@ -118,7 +118,7 @@ var RadarrClient = /** @class */ (function () {
         };
     };
     RadarrClient.prototype.parseLanguage = function (language) {
-        return exports.RADARR_LANGUAGE_ID_TO_FFMPEG[language.id];
+        return RADARR_LANGUAGE_ID_TO_FFMPEG[language.id];
     };
     RadarrClient.prototype.getByTmdbId = function (tmdbId) {
         return __awaiter(this, void 0, void 0, function () {

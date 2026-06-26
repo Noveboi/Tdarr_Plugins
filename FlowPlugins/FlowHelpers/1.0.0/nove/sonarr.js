@@ -37,9 +37,9 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SonarrClient = exports.SONARR_LANGUAGE_ID_TO_FFMPEG = void 0;
+exports.SonarrClient = void 0;
 var types_1 = require("./types");
-exports.SONARR_LANGUAGE_ID_TO_FFMPEG = (_a = {},
+var SONARR_LANGUAGE_ID_TO_FFMPEG = (_a = {},
     _a[-2] = { name: 'Original', ffmpegCode: null },
     _a[0] = { name: 'Unknown', ffmpegCode: 'und' },
     _a[1] = { name: 'English', ffmpegCode: 'eng', bcp47: 'en' },
@@ -106,7 +106,7 @@ var SonarrClient = /** @class */ (function () {
         };
     };
     SonarrClient.prototype.parseLanguage = function (language) {
-        return exports.SONARR_LANGUAGE_ID_TO_FFMPEG[language.id];
+        return SONARR_LANGUAGE_ID_TO_FFMPEG[language.id];
     };
     SonarrClient.prototype.getByTmdbId = function (tmdbId) {
         return __awaiter(this, void 0, void 0, function () {
