@@ -79,7 +79,7 @@ var details = function () { return ({
             type: 'string',
             defaultValue: '',
             inputUI: {
-                type: 'text',
+                type: 'textarea',
             },
             tooltip: 'The notification body',
         },
