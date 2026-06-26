@@ -8,5 +8,5 @@
 
 ### VS Code ###
 .vscode/
-
+tdarrIgnore.txt
 .env
