@@ -2,7 +2,7 @@ import {
   ParsedMoviePath,
   ParsedTvEpisodePath,
   parseMediaPath,
-} from '../../FlowPluginsTs/FlowHelpers/1.0.0/nove/parser';
+} from '../../../FlowPluginsTs/FlowHelpers/1.0.0/nove/parser';
 
 describe('Parsing Utility Module', () => {
   let samples: {moviePath: string, movieName: string, tvPath: string};

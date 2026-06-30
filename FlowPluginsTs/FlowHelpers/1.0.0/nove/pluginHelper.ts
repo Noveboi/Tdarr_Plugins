@@ -6,13 +6,11 @@ import type {
 } from '../interfaces/synced/IFileObject';
 
 import type Ijob from '../interfaces/synced/jobInterface';
-import type { IscanTypes } from '../fileUtils';
 
 import type {
   IconfigVars,
   IffmpegCommand,
   IffmpegCommandStream,
-  Ilog,
   IpluginInputArgs,
   IupdateWorker,
   Ivariables,
@@ -216,7 +214,9 @@ export const variables = (
 export const defaultDeps = (
   configVars: IconfigVars = {} as IconfigVars,
 ): IpluginInputArgs['deps'] => ({
-  fsextra: {},
+  fsextra: {
+    ensureDirSync: jest.fn(),
+  },
   parseArgsStringToArgv: jest.fn(),
   importFresh: jest.fn(),
   axiosMiddleware: jest.fn(),

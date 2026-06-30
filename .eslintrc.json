@@ -83,5 +83,16 @@
         "tsx": "never"
       }
    ]
-  }
+  },
+  "overrides": [
+    {
+      "files": [
+        "tests/**/*.ts",
+        "tests/**/*.js"
+      ],
+      "env": {
+        "jest": true
+      }
+    }
+  ]
 }

@@ -1,15 +1,25 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+
   roots: ['tests/FlowPlugins', 'tests/NovePlugins'],
   testMatch: ['**/*.test.ts'],
+
   transform: {
-    '^.+\\.ts$': ['ts-jest', { useESM: false }],
+    '^.+\\.ts$': [
+      'ts-jest',
+      {
+        useESM: false,
+        tsconfig: 'tsconfig.test.json',
+      },
+    ],
   },
+
   collectCoverageFrom: [
     'FlowPluginsTs/**/*.ts',
     '!FlowPluginsTs/**/*.d.ts',
   ],
+
   modulePathIgnorePatterns: ['<rootDir>/node_modules/'],
   setupFilesAfterEnv: ['<rootDir>/tests/jest.setup.js'],
   moduleFileExtensions: ['ts', 'js', 'json'],
