@@ -40,7 +40,11 @@ describe('Embedded Subtitle Extraction', () => {
 
       expect(output.outputNumber).toBe(1);
       expect(output.outputFileObj).toBe(args.inputFileObj);
-      expect(subStream.outputArgs).toContain('-map 0:s:{outputTypeIndex}');
+      expect(subStream.outputArgs).toEqual(
+        expect.arrayContaining([
+          '-map', '0:s:{outputTypeIndex}',
+        ]),
+      );
     });
 
     it('should properly set output filename for subtitle stream', () => {
@@ -56,8 +60,11 @@ describe('Embedded Subtitle Extraction', () => {
 
       expect(output.outputNumber).toBe(1);
       expect(output.outputFileObj).toBe(args.inputFileObj);
-      expect(subStream.outputArgs).toContain('-map 0:s:{outputTypeIndex}');
-      expect(subStream.outputArgs).toContain(`${filenameNoExtension}.eng.srt`);
+      expect(subStream.outputArgs).toEqual(
+        expect.arrayContaining([
+          '-map', '0:s:{outputTypeIndex}', `${filenameNoExtension}.eng.srt`,
+        ]),
+      );
     });
 
     it('should properly set output filename for multiple subtitle streams', () => {
@@ -77,9 +84,12 @@ describe('Embedded Subtitle Extraction', () => {
 
       expect(output.outputNumber).toBe(1);
       expect(output.outputFileObj).toBe(args.inputFileObj);
-      expect(engSubStream.outputArgs).toContain('-map 0:s:{outputTypeIndex}');
-      expect(ellSubStream.outputArgs).toContain('-map 0:s:{outputTypeIndex}');
-      expect(freSubStream.outputArgs).toContain('-map 0:s:{outputTypeIndex}');
+      expect(engSubStream.outputArgs).toContain('-map');
+      expect(ellSubStream.outputArgs).toContain('-map');
+      expect(freSubStream.outputArgs).toContain('-map');
+      expect(engSubStream.outputArgs).toContain('0:s:{outputTypeIndex}');
+      expect(ellSubStream.outputArgs).toContain('0:s:{outputTypeIndex}');
+      expect(freSubStream.outputArgs).toContain('0:s:{outputTypeIndex}');
       expect(engSubStream.outputArgs).toContain(`${filenameNoExtension}.eng.srt`);
       expect(ellSubStream.outputArgs).toContain(`${filenameNoExtension}.ell.srt`);
       expect(freSubStream.outputArgs).toContain(`${filenameNoExtension}.fre.srt`);
@@ -139,7 +149,8 @@ describe('Embedded Subtitle Extraction', () => {
       expect(result.outputNumber).toBe(1);
       expect(spawnArgs).toEqual(
         expect.arrayContaining([
-          '-map 0:s:0',
+          '-map',
+          '0:s:0',
           'Flow (2024).ell.srt',
         ]),
       );

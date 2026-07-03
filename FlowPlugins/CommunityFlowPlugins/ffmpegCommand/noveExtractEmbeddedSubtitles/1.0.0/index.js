@@ -64,7 +64,7 @@ var plugin = (0, ffmpeg_1.ffMpegCommandPlugin)(details, function (args) {
             args.jobLog("Skipping subtitle #".concat(idx, ", reason: ").concat(outputFilenameResult.error));
             return;
         }
-        stream.outputArgs.push('-map 0:s:{outputTypeIndex}', outputFilenameResult.value);
+        stream.outputArgs.push('-map', '0:s:{outputTypeIndex}', outputFilenameResult.value);
     });
     return {
         outputFileObj: args.inputFileObj,

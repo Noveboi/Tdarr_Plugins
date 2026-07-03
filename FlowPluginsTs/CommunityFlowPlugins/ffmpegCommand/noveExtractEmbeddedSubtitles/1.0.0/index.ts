@@ -74,7 +74,7 @@ const plugin = ffMpegCommandPlugin(details, (args) => {
       return;
     }
 
-    stream.outputArgs.push('-map 0:s:{outputTypeIndex}', outputFilenameResult.value);
+    stream.outputArgs.push('-map', '0:s:{outputTypeIndex}', outputFilenameResult.value);
   });
 
   return {
