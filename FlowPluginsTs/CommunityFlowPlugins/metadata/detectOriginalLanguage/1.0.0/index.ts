@@ -50,10 +50,12 @@ const details = (): IpluginDetails => ({
 });
 
 const getApiClient = (args: IpluginInputArgs, mediaInfo: ParsedMediaInfo): ArrClient => {
+  const vars = args.userVariables;
+
   switch (mediaInfo.mediaType) {
     case 'movie':
-      const radarrApiKey = args.userVariables.global.radarrApiKey?.trim();
-      const radarrUrl = args.userVariables.global.radarrUrl?.trim();
+      const radarrApiKey = (vars.global.radarrApiKey ?? vars.library.radarrApiKey)?.trim();
+      const radarrUrl = (vars.global.radarrUrl ?? vars.library.radarrUrl)?.trim();
 
       if (!radarrApiKey) {
         throw new Error('Radarr API key was not defined');
@@ -67,8 +69,8 @@ const getApiClient = (args: IpluginInputArgs, mediaInfo: ParsedMediaInfo): ArrCl
       return new RadarrClient(radarrUrl, radarrApiKey);
 
     case 'tv':
-      const sonarrApiKey = args.userVariables.global.sonarrApiKey?.trim();
-      const sonarrUrl = args.userVariables.global.sonarrUrl?.trim();
+      const sonarrApiKey = (vars.global.sonarrApiKey ?? vars.library.sonarrApiKey)?.trim();
+      const sonarrUrl = (vars.global.sonarrUrl ?? vars.library.sonarrUrl)?.trim();
 
       if (!sonarrApiKey) {
         throw new Error('Sonarr API key was not defined');

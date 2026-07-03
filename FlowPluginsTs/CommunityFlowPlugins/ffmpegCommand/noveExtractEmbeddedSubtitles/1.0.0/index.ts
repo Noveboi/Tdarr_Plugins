@@ -6,8 +6,8 @@ import { err, ok, Result } from '../../../../FlowHelpers/1.0.0/nove/types';
 
 /* eslint no-plusplus: ["error", { "allowForLoopAfterthoughts": true }] */
 const details = () :IpluginDetails => ({
-  name: 'Filter Subtitles by Language',
-  description: 'Remove subtitle tracks not matching the specified languages',
+  name: 'Extract Embedded Subtitles',
+  description: 'Extract subtitle tracks to separate files',
   style: {
     borderColor: '#6efefc',
   },

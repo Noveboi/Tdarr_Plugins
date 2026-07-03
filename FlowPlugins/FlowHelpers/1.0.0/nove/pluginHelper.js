@@ -128,7 +128,9 @@ exports.variables = variables;
 var defaultDeps = function (configVars) {
     if (configVars === void 0) { configVars = {}; }
     return ({
-        fsextra: {},
+        fsextra: {
+            ensureDirSync: jest.fn(),
+        },
         parseArgsStringToArgv: jest.fn(),
         importFresh: jest.fn(),
         axiosMiddleware: jest.fn(),

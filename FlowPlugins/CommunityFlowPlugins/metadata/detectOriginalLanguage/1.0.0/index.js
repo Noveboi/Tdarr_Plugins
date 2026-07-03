@@ -79,11 +79,12 @@ var details = function () { return ({
 }); };
 exports.details = details;
 var getApiClient = function (args, mediaInfo) {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e, _f, _g, _h;
+    var vars = args.userVariables;
     switch (mediaInfo.mediaType) {
         case 'movie':
-            var radarrApiKey = (_a = args.userVariables.global.radarrApiKey) === null || _a === void 0 ? void 0 : _a.trim();
-            var radarrUrl = (_b = args.userVariables.global.radarrUrl) === null || _b === void 0 ? void 0 : _b.trim();
+            var radarrApiKey = (_b = ((_a = vars.global.radarrApiKey) !== null && _a !== void 0 ? _a : vars.library.radarrApiKey)) === null || _b === void 0 ? void 0 : _b.trim();
+            var radarrUrl = (_d = ((_c = vars.global.radarrUrl) !== null && _c !== void 0 ? _c : vars.library.radarrUrl)) === null || _d === void 0 ? void 0 : _d.trim();
             if (!radarrApiKey) {
                 throw new Error('Radarr API key was not defined');
             }
@@ -93,8 +94,8 @@ var getApiClient = function (args, mediaInfo) {
             args.jobLog("Initializing RadarrClient with URL \"".concat(radarrUrl, "\""));
             return new radarr_1.RadarrClient(radarrUrl, radarrApiKey);
         case 'tv':
-            var sonarrApiKey = (_c = args.userVariables.global.sonarrApiKey) === null || _c === void 0 ? void 0 : _c.trim();
-            var sonarrUrl = (_d = args.userVariables.global.sonarrUrl) === null || _d === void 0 ? void 0 : _d.trim();
+            var sonarrApiKey = (_f = ((_e = vars.global.sonarrApiKey) !== null && _e !== void 0 ? _e : vars.library.sonarrApiKey)) === null || _f === void 0 ? void 0 : _f.trim();
+            var sonarrUrl = (_h = ((_g = vars.global.sonarrUrl) !== null && _g !== void 0 ? _g : vars.library.sonarrUrl)) === null || _h === void 0 ? void 0 : _h.trim();
             if (!sonarrApiKey) {
                 throw new Error('Sonarr API key was not defined');
             }

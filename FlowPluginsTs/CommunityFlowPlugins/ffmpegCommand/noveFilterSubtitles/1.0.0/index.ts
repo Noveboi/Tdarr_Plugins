@@ -1,6 +1,7 @@
 /* eslint-disable no-param-reassign */
 import { IffmpegCommandStream, IpluginDetails } from '../../../../FlowHelpers/1.0.0/interfaces/interfaces';
-import { isValidLanguageCode, ffMpegCommandPlugin } from '../../../../FlowHelpers/1.0.0/nove/ffmpeg';
+import { ffMpegCommandPlugin } from '../../../../FlowHelpers/1.0.0/nove/ffmpeg';
+import { parseLanguageCodes } from '../../../../FlowHelpers/1.0.0/nove/utils';
 
 const OUT_SUCCESS = 1;
 const OUT_FAIL = 2;
@@ -63,37 +64,36 @@ const hasWantedLanguage = (stream: IffmpegCommandStream, languages: string[]): b
 };
 
 const plugin = ffMpegCommandPlugin(details, (args) => {
-  const languages = String(args.inputs.languages)
-    .trim()
-    .split(',');
+  const languagesResult = parseLanguageCodes(String(args.inputs.languages));
+  const backupLanguagesResult = parseLanguageCodes(String(args.inputs.backupLanguages), true);
 
-  if (languages.length === 1 && !languages[0]) {
-    throw new Error('Languages are empty. Specify at least one language');
+  if (!languagesResult.ok) {
+    throw new Error(languagesResult.error);
   }
 
-  const invalidLanguages = languages.filter((lang) => !isValidLanguageCode(lang));
-
-  if (invalidLanguages.length > 0) {
-    throw new Error(`Languages [${invalidLanguages.join(', ')}] are invalid codes for ffmpeg`);
+  if (!backupLanguagesResult.ok) {
+    throw new Error(backupLanguagesResult.error);
   }
 
+  const languages = languagesResult.value;
+  const backupLanguages = backupLanguagesResult.value;
   const command = args.variables.ffmpegCommand;
 
-  args.jobLog(`Got ${languages.length} languages to keep: [${languages.join(', ')}]`);
+  args.jobLog(`Got ${languages.length} target languages: [${languages.join(', ')}]`);
+  args.jobLog(`Got ${backupLanguages.length} backup languages: [${backupLanguages.join(', ')}]`);
 
   const subtitleStreams = command.streams
     .filter((stream) => stream.codec_type === 'subtitle');
 
-  const streamsToExclude = subtitleStreams
+  let streamsToExclude = subtitleStreams
     .filter((stream) => !hasWantedLanguage(stream, languages));
 
-  if (streamsToExclude.length === subtitleStreams.length) {
-    args.jobLog(`Current media does not contain subtitle streams with languages: ${languages.join(', ')}`);
-    return {
-      outputFileObj: args.inputFileObj,
-      outputNumber: OUT_FAIL,
-      variables: args.variables,
-    };
+  // true if ALL streams are to be excluded.
+  if (streamsToExclude.length === subtitleStreams.length && backupLanguages.length > 0) {
+    args.jobLog('No subtitles with target languages found, falling back to backup languages');
+
+    streamsToExclude = subtitleStreams
+      .filter((stream) => !hasWantedLanguage(stream, backupLanguages));
   }
 
   args.jobLog(`Discarding ${streamsToExclude.length} out of ${subtitleStreams.length} subtitle streams`);
