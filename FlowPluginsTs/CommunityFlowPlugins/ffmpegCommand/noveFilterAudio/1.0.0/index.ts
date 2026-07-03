@@ -53,8 +53,8 @@ const hasWantedLanguage = (stream: IffmpegCommandStream, languages: string[]): b
 
 const plugin = ffMpegCommandPlugin(details, (args) => {
   const languages = String(args.inputs.languages)
-    .trim()
-    .split(',');
+    .split(',')
+    .map((l) => l.trim());
 
   if (languages.length === 1 && !languages[0]) {
     throw new Error('Languages are empty. Specify at least one language');

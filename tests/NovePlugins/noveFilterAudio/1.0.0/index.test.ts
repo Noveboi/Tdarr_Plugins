@@ -107,6 +107,34 @@ describe('Filtering Audio Streams by Language', () => {
     });
   });
 
+  describe('Edge Cases', () => {
+    it('should trim spaces between commas in `languages` list', () => {
+      const args = new PluginInputArgsBuilder()
+        .withInput('languages', ' eng, gre,jap,     fre')
+        .addAudioStream({ tags: { language: 'eng' } })
+        .addAudioStream({ tags: { language: 'gre' } })
+        .addAudioStream({ tags: { language: 'jap' } })
+        .addAudioStream({ tags: { language: 'fre' } })
+        .addAudioStream({ tags: { language: 'esp' } })
+        .build();
+
+      const output = plugin(args);
+      const { streams } = output.variables.ffmpegCommand;
+
+      expect(output.outputNumber).toBe(1);
+      expect(output.outputFileObj).toBe(args.inputFileObj);
+      expect(streams).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ removed: true, tags: { language: 'esp' } }),
+          expect.objectContaining({ removed: false, tags: { language: 'eng' } }),
+          expect.objectContaining({ removed: false, tags: { language: 'gre' } }),
+          expect.objectContaining({ removed: false, tags: { language: 'jap' } }),
+          expect.objectContaining({ removed: false, tags: { language: 'fre' } }),
+        ]),
+      );
+    });
+  });
+
   describe('Invalid Usage', () => {
     it('should throw when "languages" input is not defined', () => {
       const args = new PluginInputArgsBuilder().build();

@@ -8,6 +8,7 @@ import {
 
 import { PluginInputArgsBuilder } from '../../../../FlowPluginsTs/FlowHelpers/1.0.0/nove/pluginHelper';
 import { IpluginInputArgs } from '../../../../FlowPluginsTs/FlowHelpers/1.0.0/interfaces/interfaces';
+import { CLI } from '../../../../FlowPluginsTs/FlowHelpers/1.0.0/cliUtils';
 
 // Mock the CLI class
 jest.mock('../../../../FlowPluginsTs/FlowHelpers/1.0.0/cliUtils', () => ({
@@ -100,11 +101,17 @@ describe('Embedded Subtitle Extraction', () => {
 
   describe('Integration with "ffmpeg command execute" plugin', () => {
     const execute = executeCommandPlugin;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let cli: any;
+    const getMockCli = (): jest.Mock<CLI> => require('../../../../FlowPluginsTs/FlowHelpers/1.0.0/cliUtils').CLI;
+    const getSpawnArgs = (): string[] => {
+      const cli = getMockCli();
+      const [cliOptions] = cli.mock.calls[0];
+      const { spawnArgs } = cliOptions;
+
+      return spawnArgs;
+    }
 
     beforeEach(() => {
-      cli = require('../../../../FlowPluginsTs/FlowHelpers/1.0.0/cliUtils').CLI;
+      const cli = require('../../../../FlowPluginsTs/FlowHelpers/1.0.0/cliUtils').CLI;
       cli.mockImplementation(() => ({
         runCli: jest.fn().mockResolvedValue({ cliExitCode: 0 }),
       }));
@@ -127,12 +134,13 @@ describe('Embedded Subtitle Extraction', () => {
       };
 
       const result = await execute(input);
-      const { spawnArgs } = cli.mock.calls[0];
+      const spawnArgs = getSpawnArgs();
 
       expect(result.outputNumber).toBe(1);
       expect(spawnArgs).toEqual(
         expect.arrayContaining([
-          '-map 0:s:0 Flow (2024).ell.srt',
+          '-map 0:s:0',
+          'Flow (2024).ell.srt',
         ]),
       );
     });

@@ -29,6 +29,17 @@ const details = () :IpluginDetails => ({
         type: 'text',
       },
     },
+    {
+      label: 'Backup Languages',
+      name: 'backupLanguages',
+      tooltip: `Comma-separated list of languages to keep in the event no subtitles
+      with languages from the main 'languages' list are found.`,
+      defaultValue: '',
+      type: 'string',
+      inputUI: {
+        type: 'text',
+      },
+    },
   ],
   outputs: [
     {
