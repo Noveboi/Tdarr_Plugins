@@ -1,6 +1,6 @@
 import {
   plugin as sut,
-} from '../../../../FlowPluginsTs/CommunityFlowPlugins/ffmpegCommand/noveExtractEmbeddedSubtitles/1.0.0/index';
+} from '../../../../FlowPluginsTs/CommunityFlowPlugins/subtitles/noveExtractEmbeddedSubtitles/1.0.0/index';
 
 import {
   plugin as executeCommandPlugin,
