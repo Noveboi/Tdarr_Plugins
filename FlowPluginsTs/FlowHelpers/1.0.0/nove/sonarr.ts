@@ -72,6 +72,21 @@ export interface SonarrSeriesInfo extends MediaInfo {
   statistics?: unknown
 }
 
+// https://sonarr.tv/docs/api/#v3/tag/namingconfig/GET/api/v3/config/naming
+export interface SonarrNamingConfiguration {
+  id: number
+  renameEpisodes: boolean
+  replaceIllegalCharacters: boolean
+  colonReplacementFormat: number
+  multiEpisodeStyle: number
+  standardEpisodeFormat?: string
+  dailyEpisodeFormat?: string
+  animeEpisodeFormat?: string
+  seriesFolderFormat?: string
+  seasonFolderFormat?: string
+  specialsFolderFormat?: string
+}
+
 // https://sonarr.tv/docs/api/#v3/description/introduction
 export class SonarrClient implements ArrClient {
   private readonly baseUrl: string;
@@ -117,5 +132,24 @@ export class SonarrClient implements ArrClient {
     const seriesInfo = await response.json() as SonarrSeriesInfo;
 
     return ok(seriesInfo);
+  }
+
+  public async getNamingConfiguration(): Promise<Result<SonarrNamingConfiguration>> {
+    const response = await fetch(this.getApiPath('config/naming'), {
+      method: 'GET',
+      headers: this.defaultHeaders(),
+    });
+
+    if (response.status !== 200) {
+      return err(`Unknown error occurred: ${response.status} ${response.statusText}`);
+    }
+
+    const namingConfig = await response.json() as SonarrNamingConfiguration;
+
+    if (!namingConfig) {
+      return err('Failed to deserialize response');
+    }
+
+    return ok(namingConfig);
   }
 }

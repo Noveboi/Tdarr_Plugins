@@ -133,6 +133,31 @@ var SonarrClient = /** @class */ (function () {
             });
         });
     };
+    SonarrClient.prototype.getNamingConfiguration = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var response, namingConfig;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, fetch(this.getApiPath('config/naming'), {
+                            method: 'GET',
+                            headers: this.defaultHeaders(),
+                        })];
+                    case 1:
+                        response = _a.sent();
+                        if (response.status !== 200) {
+                            return [2 /*return*/, (0, types_1.err)("Unknown error occurred: ".concat(response.status, " ").concat(response.statusText))];
+                        }
+                        return [4 /*yield*/, response.json()];
+                    case 2:
+                        namingConfig = _a.sent();
+                        if (!namingConfig) {
+                            return [2 /*return*/, (0, types_1.err)('Failed to deserialize response')];
+                        }
+                        return [2 /*return*/, (0, types_1.ok)(namingConfig)];
+                }
+            });
+        });
+    };
     return SonarrClient;
 }());
 exports.SonarrClient = SonarrClient;

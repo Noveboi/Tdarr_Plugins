@@ -82,6 +82,15 @@ export interface RadarrMovieInfo extends MediaInfo {
   genres: string[]
 }
 
+export interface RadarrNamingConfiguration {
+  id: number
+  renameMovies: boolean
+  replaceIllegalCharacters: boolean
+  colonReplacementFormat: 'delete' | 'dash' | 'spaceDash' | 'spaceDashSpace' | 'smart'
+  standardMovieFormat?: string
+  movieFolderFormat?: string
+}
+
 // https://radarr.video/docs/api/#/Movie/get_api_v3_movie__id_
 export class RadarrClient implements ArrClient {
   private readonly baseUrl: string;
@@ -127,5 +136,24 @@ export class RadarrClient implements ArrClient {
     const movieInfo = await response.json() as RadarrMovieInfo;
 
     return ok(movieInfo);
+  }
+
+  public async getNamingConfiguration(): Promise<Result<RadarrNamingConfiguration>> {
+    const response = await fetch(this.getApiPath('config/naming'), {
+      method: 'GET',
+      headers: this.defaultHeaders(),
+    });
+
+    if (response.status !== 200) {
+      return err(`Unexpected error occured: ${response.status} ${response.statusText}`);
+    }
+
+    const namingConfig = await response.json() as RadarrNamingConfiguration;
+
+    if (!namingConfig) {
+      return err('Failed to deserialize response');
+    }
+
+    return ok(namingConfig);
   }
 }

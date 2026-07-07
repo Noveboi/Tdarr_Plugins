@@ -19,7 +19,7 @@ const details = () :IpluginDetails => ({
   pType: '',
   requiresVersion: '2.11.01',
   sidebarPosition: -1,
-  icon: 'faCc',
+  icon: 'faLanguage',
   inputs: [],
   outputs: [
     {
