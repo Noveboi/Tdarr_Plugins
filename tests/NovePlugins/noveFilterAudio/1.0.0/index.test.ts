@@ -3,7 +3,7 @@ import { PluginInputArgsBuilder } from '../../../../FlowPluginsTs/FlowHelpers/1.
 
 describe('Filtering Audio Streams by Language', () => {
   describe('Standard Behavior', () => {
-    it('should discard unwanted languages when stream with target language exists', () => {
+    it('should discard unwanted languages when stream with target language exists', async () => {
       const targetLanguage = 'gre';
 
       const args = new PluginInputArgsBuilder()
@@ -12,7 +12,7 @@ describe('Filtering Audio Streams by Language', () => {
         .addAudioStream({ tags: { language: 'eng' } })
         .build();
 
-      const output = plugin(args);
+      const output = await plugin(args);
       const { streams } = output.variables.ffmpegCommand;
 
       expect(output.outputNumber).toBe(1);
@@ -25,7 +25,7 @@ describe('Filtering Audio Streams by Language', () => {
       );
     });
 
-    it('should discard multiple unwanted languages when stream with target language exists', () => {
+    it('should discard multiple unwanted languages when stream with target language exists', async () => {
       const targetLanguage = 'kor';
 
       const args = new PluginInputArgsBuilder()
@@ -35,7 +35,7 @@ describe('Filtering Audio Streams by Language', () => {
         .addAudioStream({ tags: { language: 'fre' } })
         .build();
 
-      const output = plugin(args);
+      const output = await plugin(args);
       const { streams } = output.variables.ffmpegCommand;
 
       expect(output.outputNumber).toBe(1);
@@ -50,13 +50,13 @@ describe('Filtering Audio Streams by Language', () => {
     });
 
     // Were the plugin to do anything in the scenario below, all audio streams would be wiped.
-    it('should not do anything when stream with target language does not exist', () => {
+    it('should not do anything when stream with target language does not exist', async () => {
       const args = new PluginInputArgsBuilder()
         .withInput('languages', 'gre')
         .addAudioStream({ tags: { language: 'eng' } })
         .build();
 
-      const output = plugin(args);
+      const output = await plugin(args);
       const { streams } = output.variables.ffmpegCommand;
 
       expect(output.outputNumber).toBe(2);
@@ -64,7 +64,7 @@ describe('Filtering Audio Streams by Language', () => {
       expect(streams).toEqual(args.variables.ffmpegCommand.streams);
     });
 
-    it('should accept multiple comma-separated target languages if all target languages exist', () => {
+    it('should accept multiple comma-separated target languages if all target languages exist', async () => {
       const args = new PluginInputArgsBuilder()
         .withInput('languages', 'jap,gre')
         .addAudioStream({ tags: { language: 'eng' } })
@@ -72,7 +72,7 @@ describe('Filtering Audio Streams by Language', () => {
         .addAudioStream({ tags: { language: 'gre' } })
         .build();
 
-      const output = plugin(args);
+      const output = await plugin(args);
       const { streams } = output.variables.ffmpegCommand;
 
       expect(output.outputNumber).toBe(1);
@@ -86,14 +86,14 @@ describe('Filtering Audio Streams by Language', () => {
       );
     });
 
-    it('should accept multiple comma-separated target languages if at least one target language exists', () => {
+    it('should accept multiple comma-separated target languages if at least one target language exists', async () => {
       const args = new PluginInputArgsBuilder()
         .withInput('languages', 'jap,gre')
         .addAudioStream({ tags: { language: 'eng' } })
         .addAudioStream({ tags: { language: 'gre' } })
         .build();
 
-      const output = plugin(args);
+      const output = await plugin(args);
       const { streams } = output.variables.ffmpegCommand;
 
       expect(output.outputNumber).toBe(1);
@@ -108,7 +108,7 @@ describe('Filtering Audio Streams by Language', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should trim spaces between commas in `languages` list', () => {
+    it('should trim spaces between commas in `languages` list', async () => {
       const args = new PluginInputArgsBuilder()
         .withInput('languages', ' eng, gre,jap,     fre')
         .addAudioStream({ tags: { language: 'eng' } })
@@ -118,7 +118,7 @@ describe('Filtering Audio Streams by Language', () => {
         .addAudioStream({ tags: { language: 'esp' } })
         .build();
 
-      const output = plugin(args);
+      const output = await plugin(args);
       const { streams } = output.variables.ffmpegCommand;
 
       expect(output.outputNumber).toBe(1);
@@ -136,17 +136,17 @@ describe('Filtering Audio Streams by Language', () => {
   });
 
   describe('Invalid Usage', () => {
-    it('should throw when "languages" input is not defined', () => {
+    it('should throw when "languages" input is not defined', async () => {
       const args = new PluginInputArgsBuilder().build();
-      expect(() => plugin(args)).toThrow(/empty.*specify.*language/i);
+      await expect(() => plugin(args)).rejects.toThrow(/empty.*specify.*language/i);
     });
 
-    it('should throw when "languages" contains one or more invalid languages codes', () => {
+    it('should throw when "languages" contains one or more invalid languages codes', async () => {
       const args = new PluginInputArgsBuilder()
         .withInput('languages', 'English, Greek')
         .build();
 
-      expect(() => plugin(args)).toThrow(/english.*greek/i);
+      await expect(() => plugin(args)).rejects.toThrow(/english.*greek/i);
     });
   });
 });

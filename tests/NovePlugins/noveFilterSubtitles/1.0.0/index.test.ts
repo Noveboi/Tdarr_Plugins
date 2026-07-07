@@ -9,7 +9,7 @@ common logic between the two plugins in order to keep them completely separate l
 
 describe('Filtering Subtitle Streams by Language', () => {
   describe('Standard Behavior', () => {
-    it('should discard unwanted languages when stream with target language exists', () => {
+    it('should discard unwanted languages when stream with target language exists', async () => {
       const targetLanguage = 'ell';
 
       const args = new PluginInputArgsBuilder()
@@ -18,7 +18,7 @@ describe('Filtering Subtitle Streams by Language', () => {
         .addSubtitleStream({ tags: { language: 'eng' } })
         .build();
 
-      const output = plugin(args);
+      const output = await plugin(args);
       const { streams } = output.variables.ffmpegCommand;
 
       expect(output.outputNumber).toBe(1);
@@ -31,7 +31,7 @@ describe('Filtering Subtitle Streams by Language', () => {
       );
     });
 
-    it('should discard multiple unwanted languages when stream with target language exists', () => {
+    it('should discard multiple unwanted languages when stream with target language exists', async () => {
       const targetLanguage = 'kor';
 
       const args = new PluginInputArgsBuilder()
@@ -41,7 +41,7 @@ describe('Filtering Subtitle Streams by Language', () => {
         .addSubtitleStream({ tags: { language: 'fre' } })
         .build();
 
-      const output = plugin(args);
+      const output = await plugin(args);
       const { streams } = output.variables.ffmpegCommand;
 
       expect(output.outputNumber).toBe(1);
@@ -56,13 +56,13 @@ describe('Filtering Subtitle Streams by Language', () => {
     });
 
     // In contrast to `filterAudio`, `filterSubtitles` DOES wipe all subtitles if no matches exist.
-    it('should remove all subtitles when target language does not exist and backup languages are not defined', () => {
+    it('should remove all subtitles when target language does not exist and no backup languages', async () => {
       const args = new PluginInputArgsBuilder()
         .withInput('languages', 'ell')
         .addSubtitleStream({ tags: { language: 'eng' } })
         .build();
 
-      const output = plugin(args);
+      const output = await plugin(args);
       const { streams } = output.variables.ffmpegCommand;
 
       expect(output.outputNumber).toBe(1);
@@ -74,7 +74,7 @@ describe('Filtering Subtitle Streams by Language', () => {
       );
     });
 
-    it('should accept multiple comma-separated target languages if all target languages exist', () => {
+    it('should accept multiple comma-separated target languages if all target languages exist', async () => {
       const args = new PluginInputArgsBuilder()
         .withInput('languages', 'jap,ell')
         .addSubtitleStream({ tags: { language: 'eng' } })
@@ -82,7 +82,7 @@ describe('Filtering Subtitle Streams by Language', () => {
         .addSubtitleStream({ tags: { language: 'ell' } })
         .build();
 
-      const output = plugin(args);
+      const output = await plugin(args);
       const { streams } = output.variables.ffmpegCommand;
 
       expect(output.outputNumber).toBe(1);
@@ -96,14 +96,14 @@ describe('Filtering Subtitle Streams by Language', () => {
       );
     });
 
-    it('should accept multiple comma-separated target languages if at least one target language exists', () => {
+    it('should accept multiple comma-separated target languages if at least one target language exists', async () => {
       const args = new PluginInputArgsBuilder()
         .withInput('languages', 'jap,ell')
         .addSubtitleStream({ tags: { language: 'eng' } })
         .addSubtitleStream({ tags: { language: 'ell' } })
         .build();
 
-      const output = plugin(args);
+      const output = await plugin(args);
       const { streams } = output.variables.ffmpegCommand;
 
       expect(output.outputNumber).toBe(1);
@@ -123,7 +123,7 @@ describe('Filtering Subtitle Streams by Language', () => {
   // - In Anime, I want the main subtitle language to be 'Greek', however that's not always available, in that
   // case I still want subtitles so I resort to 'English' as a backup because I unfortunately don't speak Japanese.
   describe('Backup Languages', () => {
-    it('should resort to using backup languages if the target languages are not found', () => {
+    it('should resort to using backup languages if the target languages are not found', async () => {
       const args = new PluginInputArgsBuilder()
         .withInput('languages', 'ell')
         .withInput('backupLanguages', 'eng')
@@ -131,7 +131,7 @@ describe('Filtering Subtitle Streams by Language', () => {
         .addSubtitleStream({ tags: { language: 'fre' } })
         .build();
 
-      const output = plugin(args);
+      const output = await plugin(args);
       const { streams } = output.variables.ffmpegCommand;
 
       expect(output.outputNumber).toBe(1);
@@ -144,7 +144,7 @@ describe('Filtering Subtitle Streams by Language', () => {
       );
     });
 
-    it('should not use backup languages if target languages exist', () => {
+    it('should not use backup languages if target languages exist', async () => {
       const args = new PluginInputArgsBuilder()
         .withInput('languages', 'ell')
         .withInput('backupLanguages', 'eng')
@@ -153,7 +153,7 @@ describe('Filtering Subtitle Streams by Language', () => {
         .addSubtitleStream({ tags: { language: 'fre' } })
         .build();
 
-      const output = plugin(args);
+      const output = await plugin(args);
       const { streams } = output.variables.ffmpegCommand;
 
       expect(output.outputNumber).toBe(1);
@@ -167,14 +167,14 @@ describe('Filtering Subtitle Streams by Language', () => {
       );
     });
 
-    it('should still discard all subtitles if no target/backup languages exist', () => {
+    it('should still discard all subtitles if no target/backup languages exist', async () => {
       const args = new PluginInputArgsBuilder()
         .withInput('languages', 'ell')
         .withInput('backupLanguages', 'eng')
         .addSubtitleStream({ tags: { language: 'chi' } })
         .build();
 
-      const output = plugin(args);
+      const output = await plugin(args);
       const { streams } = output.variables.ffmpegCommand;
 
       expect(output.outputNumber).toBe(1);
@@ -188,7 +188,7 @@ describe('Filtering Subtitle Streams by Language', () => {
   });
 
   describe('Edge Cases', () => {
-    it('should trim spaces between commas in `languages` list', () => {
+    it('should trim spaces between commas in `languages` list', async () => {
       const args = new PluginInputArgsBuilder()
         .withInput('languages', ' eng, ell,jap,     fre')
         .addSubtitleStream({ tags: { language: 'eng' } })
@@ -198,7 +198,7 @@ describe('Filtering Subtitle Streams by Language', () => {
         .addSubtitleStream({ tags: { language: 'esp' } })
         .build();
 
-      const output = plugin(args);
+      const output = await plugin(args);
       const { streams } = output.variables.ffmpegCommand;
 
       expect(output.outputNumber).toBe(1);
@@ -216,17 +216,17 @@ describe('Filtering Subtitle Streams by Language', () => {
   });
 
   describe('Invalid Usage', () => {
-    it('should throw when "languages" input is not defined', () => {
+    it('should throw when "languages" input is not defined', async () => {
       const args = new PluginInputArgsBuilder().build();
-      expect(() => plugin(args)).toThrow(/empty.*specify.*language/i);
+      await expect(() => plugin(args)).rejects.toThrow(/empty.*specify.*language/i);
     });
 
-    it('should throw when "languages" contains one or more invalid languages codes', () => {
+    it('should throw when "languages" contains one or more invalid languages codes', async () => {
       const args = new PluginInputArgsBuilder()
         .withInput('languages', 'English, Greek')
         .build();
 
-      expect(() => plugin(args)).toThrow(/english.*greek/i);
+      await expect(() => plugin(args)).rejects.toThrow(/english.*greek/i);
     });
   });
 });
