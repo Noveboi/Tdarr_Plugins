@@ -115,6 +115,7 @@ export class SonarrClient implements ArrClient {
     return SONARR_LANGUAGE_ID_TO_FFMPEG[language.id];
   }
 
+  // https://sonarr.tv/docs/api/#v3/tag/serieslookup
   public async getByTmdbId(tmdbId: TMDBId): Promise<Result<SonarrSeriesInfo>> {
     const response = await fetch(this.getApiPath(`series/lookup?term=tmdb:${tmdbId}`), {
       method: 'GET',
@@ -129,9 +130,18 @@ export class SonarrClient implements ArrClient {
       return err(`Unknown error occurred: ${response.status} ${response.statusText}`);
     }
 
-    const seriesInfo = await response.json() as SonarrSeriesInfo;
+    // The return type here is an array, "array object[] · SeriesResource[]" - Sonarr
+    const seriesInfo = await response.json();
 
-    return ok(seriesInfo);
+    // Double check it actually is an array before returning
+    if (!Array.isArray(seriesInfo) || seriesInfo.length === 0) {
+      return err(`No series found for TMDB ID "${tmdbId}"`);
+    }
+
+    // lookup can return multiple loose matches; prefer an exact tmdbId match
+    const match = seriesInfo.find((s) => s.tmdbId === Number(tmdbId)) ?? seriesInfo[0];
+
+    return ok(match);
   }
 
   public async getNamingConfiguration(): Promise<Result<SonarrNamingConfiguration>> {
