@@ -216,9 +216,14 @@ describe('Filtering Subtitle Streams by Language', () => {
   });
 
   describe('Invalid Usage', () => {
-    it('should throw when "languages" input is not defined', async () => {
-      const args = new PluginInputArgsBuilder().build();
-      await expect(() => plugin(args)).rejects.toThrow(/empty.*specify.*language/i);
+    it('should throw when "languages" input is not defined but "backupLanguages" is', async () => {
+      const args = new PluginInputArgsBuilder()
+        .withInput('backupLanguages', 'eng,jpn,kor,ell')
+        .build();
+
+      await expect(() => plugin(args))
+        .rejects
+        .toThrow('Backup languages can only be defined if `languages` is defined');
     });
 
     it('should throw when "languages" contains one or more invalid languages codes', async () => {

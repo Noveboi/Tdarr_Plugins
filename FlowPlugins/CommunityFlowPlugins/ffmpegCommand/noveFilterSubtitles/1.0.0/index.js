@@ -1,14 +1,27 @@
 "use strict";
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.details = exports.plugin = void 0;
 var ffmpeg_1 = require("../../../../FlowHelpers/1.0.0/nove/ffmpeg");
+var languages_1 = __importDefault(require("../../../../FlowHelpers/1.0.0/nove/languages"));
 var utils_1 = require("../../../../FlowHelpers/1.0.0/nove/utils");
 var OUT_SUCCESS = 1;
 var OUT_FAIL = 2;
 /* eslint no-plusplus: ["error", { "allowForLoopAfterthoughts": true }] */
 var details = function () { return ({
-    name: 'Filter Subtitles by Language',
-    description: 'Remove subtitle tracks not matching the specified languages',
+    name: 'Filter Subtitles',
+    description: 'Remove subtitle tracks not matching the specified filters',
     style: {
         borderColor: '#6efefc',
     },
@@ -39,30 +52,37 @@ var details = function () { return ({
                 type: 'text',
             },
         },
+        {
+            label: 'Keyword Blacklist',
+            name: 'keywords',
+            tooltip: "Comma-separated list of keywords you wish to blacklist.\n      Any subtitle stream containing the keyword present in the list will be excluded.",
+            defaultValue: '',
+            type: 'string',
+            inputUI: {
+                type: 'text',
+            },
+        },
     ],
     outputs: [
         {
             number: OUT_SUCCESS,
-            tooltip: 'Subtitle streams with the specified languages were found',
+            tooltip: 'Subtitle streams with the specified filters were found',
         },
         {
             number: OUT_FAIL,
-            tooltip: 'Subtitle streams with the specified languages were not found',
+            tooltip: 'Subtitle streams with the specified filters Swere not found',
         },
     ],
 }); };
 exports.details = details;
-var hasWantedLanguage = function (stream, languages) {
-    var _a;
-    if (((_a = stream.tags) === null || _a === void 0 ? void 0 : _a.language) === undefined) {
-        return false;
-    }
-    var cleanLanguageTag = stream.tags.language.toLowerCase();
-    return languages.includes(cleanLanguageTag);
-};
 var plugin = (0, ffmpeg_1.ffMpegCommandPlugin)(details, function (args) {
-    var languagesResult = (0, utils_1.parseLanguageCodes)(String(args.inputs.languages));
-    var backupLanguagesResult = (0, utils_1.parseLanguageCodes)(String(args.inputs.backupLanguages), true);
+    var languagesResult = languages_1.default.from((0, utils_1.parseCommaSeparatedValues)(String(args.inputs.languages)), {
+        acceptEmptyList: true,
+    });
+    var backupLanguagesResult = languages_1.default.from((0, utils_1.parseCommaSeparatedValues)(String(args.inputs.backupLanguages)), {
+        acceptEmptyList: true,
+    });
+    var keywords = (0, utils_1.parseCommaSeparatedValues)(String(args.inputs.keywords), true);
     if (!languagesResult.ok) {
         throw new Error(languagesResult.error);
     }
@@ -72,20 +92,27 @@ var plugin = (0, ffmpeg_1.ffMpegCommandPlugin)(details, function (args) {
     var languages = languagesResult.value;
     var backupLanguages = backupLanguagesResult.value;
     var command = args.variables.ffmpegCommand;
-    args.jobLog("Got ".concat(languages.length, " target languages: [").concat(languages.join(', '), "]"));
-    args.jobLog("Got ".concat(backupLanguages.length, " backup languages: [").concat(backupLanguages.join(', '), "]"));
+    if (languages.length === 0 && backupLanguages.length > 0) {
+        throw new Error('Backup languages can only be defined if `languages` is defined');
+    }
+    args.jobLog("Got ".concat(languages.length, " target languages: [").concat(languages.toString(), "]"));
+    args.jobLog("Got ".concat(backupLanguages.length, " backup languages: [").concat(backupLanguages.toString(), "]"));
+    args.jobLog("Got ".concat(keywords.length, " blacklist keywords: [").concat(keywords.join(', '), "]"));
     var subtitleStreams = command.streams
         .filter(function (stream) { return stream.codec_type === 'subtitle'; });
-    var streamsToExclude = subtitleStreams
-        .filter(function (stream) { return !hasWantedLanguage(stream, languages); });
+    var streamsToExcludeLanguages = subtitleStreams
+        .filter(function (stream) { var _a; return !languages.contain((_a = stream.tags) === null || _a === void 0 ? void 0 : _a.language); });
     // true if ALL streams are to be excluded.
-    if (streamsToExclude.length === subtitleStreams.length && backupLanguages.length > 0) {
+    if (streamsToExcludeLanguages.length === subtitleStreams.length && backupLanguages.length > 0) {
         args.jobLog('No subtitles with target languages found, falling back to backup languages');
-        streamsToExclude = subtitleStreams
-            .filter(function (stream) { return !hasWantedLanguage(stream, backupLanguages); });
+        streamsToExcludeLanguages = subtitleStreams
+            .filter(function (stream) { var _a; return !backupLanguages.contain((_a = stream.tags) === null || _a === void 0 ? void 0 : _a.language); });
     }
-    args.jobLog("Discarding ".concat(streamsToExclude.length, " out of ").concat(subtitleStreams.length, " subtitle streams"));
-    streamsToExclude.forEach(function (stream) {
+    var streamsToExcludeKeywords = subtitleStreams
+        .filter(function (stream) { var _a; return (0, utils_1.containsKeywords)((_a = stream.tags) === null || _a === void 0 ? void 0 : _a.title, keywords); });
+    var totalStreamsToExclude = new Set(__spreadArray(__spreadArray([], streamsToExcludeLanguages, true), streamsToExcludeKeywords, true));
+    args.jobLog("Discarding ".concat(totalStreamsToExclude.size, " out of ").concat(subtitleStreams.length, " subtitle streams"));
+    totalStreamsToExclude.forEach(function (stream) {
         var _a, _b, _c;
         args.jobLog("Discarding \"".concat((_b = (_a = stream.tags) === null || _a === void 0 ? void 0 : _a.title) !== null && _b !== void 0 ? _b : '?', "\", lang=").concat((_c = stream.tags) === null || _c === void 0 ? void 0 : _c.language));
         stream.removed = true;

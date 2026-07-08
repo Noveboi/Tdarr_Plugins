@@ -1,15 +1,18 @@
 /* eslint-disable no-param-reassign */
-import { IffmpegCommandStream, IpluginDetails } from '../../../../FlowHelpers/1.0.0/interfaces/interfaces';
+import { IpluginDetails } from '../../../../FlowHelpers/1.0.0/interfaces/interfaces';
 import { ffMpegCommandPlugin } from '../../../../FlowHelpers/1.0.0/nove/ffmpeg';
-import { parseLanguageCodes } from '../../../../FlowHelpers/1.0.0/nove/utils';
+import LanguageSet from '../../../../FlowHelpers/1.0.0/nove/languages';
+import {
+  containsKeywords, parseCommaSeparatedValues,
+} from '../../../../FlowHelpers/1.0.0/nove/utils';
 
 const OUT_SUCCESS = 1;
 const OUT_FAIL = 2;
 
 /* eslint no-plusplus: ["error", { "allowForLoopAfterthoughts": true }] */
 const details = () :IpluginDetails => ({
-  name: 'Filter Subtitles by Language',
-  description: 'Remove subtitle tracks not matching the specified languages',
+  name: 'Filter Subtitles',
+  description: 'Remove subtitle tracks not matching the specified filters',
   style: {
     borderColor: '#6efefc',
   },
@@ -41,31 +44,40 @@ const details = () :IpluginDetails => ({
         type: 'text',
       },
     },
+    {
+      label: 'Keyword Blacklist',
+      name: 'keywords',
+      tooltip: `Comma-separated list of keywords you wish to blacklist.
+      Any subtitle stream containing the keyword present in the list will be excluded.`,
+      defaultValue: '',
+      type: 'string',
+      inputUI: {
+        type: 'text',
+      },
+    },
   ],
   outputs: [
     {
       number: OUT_SUCCESS,
-      tooltip: 'Subtitle streams with the specified languages were found',
+      tooltip: 'Subtitle streams with the specified filters were found',
     },
     {
       number: OUT_FAIL,
-      tooltip: 'Subtitle streams with the specified languages were not found',
+      tooltip: 'Subtitle streams with the specified filters Swere not found',
     },
   ],
 });
 
-const hasWantedLanguage = (stream: IffmpegCommandStream, languages: string[]): boolean => {
-  if (stream.tags?.language === undefined) {
-    return false;
-  }
-
-  const cleanLanguageTag = stream.tags.language.toLowerCase();
-  return languages.includes(cleanLanguageTag);
-};
-
 const plugin = ffMpegCommandPlugin(details, (args) => {
-  const languagesResult = parseLanguageCodes(String(args.inputs.languages));
-  const backupLanguagesResult = parseLanguageCodes(String(args.inputs.backupLanguages), true);
+  const languagesResult = LanguageSet.from(parseCommaSeparatedValues(String(args.inputs.languages)), {
+    acceptEmptyList: true,
+  });
+
+  const backupLanguagesResult = LanguageSet.from(parseCommaSeparatedValues(String(args.inputs.backupLanguages)), {
+    acceptEmptyList: true,
+  });
+
+  const keywords = parseCommaSeparatedValues(String(args.inputs.keywords), true);
 
   if (!languagesResult.ok) {
     throw new Error(languagesResult.error);
@@ -79,26 +91,39 @@ const plugin = ffMpegCommandPlugin(details, (args) => {
   const backupLanguages = backupLanguagesResult.value;
   const command = args.variables.ffmpegCommand;
 
-  args.jobLog(`Got ${languages.length} target languages: [${languages.join(', ')}]`);
-  args.jobLog(`Got ${backupLanguages.length} backup languages: [${backupLanguages.join(', ')}]`);
+  if (languages.length === 0 && backupLanguages.length > 0) {
+    throw new Error('Backup languages can only be defined if `languages` is defined');
+  }
+
+  args.jobLog(`Got ${languages.length} target languages: [${languages.toString()}]`);
+  args.jobLog(`Got ${backupLanguages.length} backup languages: [${backupLanguages.toString()}]`);
+  args.jobLog(`Got ${keywords.length} blacklist keywords: [${keywords.join(', ')}]`);
 
   const subtitleStreams = command.streams
     .filter((stream) => stream.codec_type === 'subtitle');
 
-  let streamsToExclude = subtitleStreams
-    .filter((stream) => !hasWantedLanguage(stream, languages));
+  let streamsToExcludeLanguages = subtitleStreams
+    .filter((stream) => !languages.contain(stream.tags?.language));
 
   // true if ALL streams are to be excluded.
-  if (streamsToExclude.length === subtitleStreams.length && backupLanguages.length > 0) {
+  if (streamsToExcludeLanguages.length === subtitleStreams.length && backupLanguages.length > 0) {
     args.jobLog('No subtitles with target languages found, falling back to backup languages');
 
-    streamsToExclude = subtitleStreams
-      .filter((stream) => !hasWantedLanguage(stream, backupLanguages));
+    streamsToExcludeLanguages = subtitleStreams
+      .filter((stream) => !backupLanguages.contain(stream.tags?.language));
   }
 
-  args.jobLog(`Discarding ${streamsToExclude.length} out of ${subtitleStreams.length} subtitle streams`);
+  const streamsToExcludeKeywords = subtitleStreams
+    .filter((stream) => containsKeywords(stream.tags?.title, keywords));
 
-  streamsToExclude.forEach((stream) => {
+  const totalStreamsToExclude = new Set([
+    ...streamsToExcludeLanguages,
+    ...streamsToExcludeKeywords,
+  ]);
+
+  args.jobLog(`Discarding ${totalStreamsToExclude.size} out of ${subtitleStreams.length} subtitle streams`);
+
+  totalStreamsToExclude.forEach((stream) => {
     args.jobLog(`Discarding "${stream.tags?.title ?? '?'}", lang=${stream.tags?.language}`);
     stream.removed = true;
   });

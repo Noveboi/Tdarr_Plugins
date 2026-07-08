@@ -105,6 +105,30 @@ describe('Filtering Audio Streams by Language', () => {
         ]),
       );
     });
+
+    it('should discard streams with title containing given keywords', async () => {
+      const args = new PluginInputArgsBuilder()
+        .withInput('keywords', 'commentary,director')
+        .addAudioStream({ tags: { language: 'jpn', title: 'Stereo' } })
+        .addAudioStream({ tags: { language: 'eng', title: 'Stereo' } })
+        .addAudioStream({ tags: { language: 'jpn', title: 'Episode Commentary by Cast' } })
+        .addAudioStream({ tags: { language: 'jpn', title: "Director's Notes" } })
+        .build();
+
+      const output = await plugin(args);
+      const { streams } = output.variables.ffmpegCommand;
+
+      expect(output.outputNumber).toBe(1);
+      expect(output.outputFileObj).toBe(args.inputFileObj);
+      expect(streams).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ removed: false, tags: { title: 'Stereo', language: 'jpn' } }),
+          expect.objectContaining({ removed: false, tags: { title: 'Stereo', language: 'eng' } }),
+          expect.objectContaining({ removed: true, tags: { title: 'Episode Commentary by Cast', language: 'jpn' } }),
+          expect.objectContaining({ removed: true, tags: { title: "Director's Notes", language: 'jpn' } }),
+        ]),
+      );
+    });
   });
 
   describe('Edge Cases', () => {
@@ -136,11 +160,6 @@ describe('Filtering Audio Streams by Language', () => {
   });
 
   describe('Invalid Usage', () => {
-    it('should throw when "languages" input is not defined', async () => {
-      const args = new PluginInputArgsBuilder().build();
-      await expect(() => plugin(args)).rejects.toThrow(/empty.*specify.*language/i);
-    });
-
     it('should throw when "languages" contains one or more invalid languages codes', async () => {
       const args = new PluginInputArgsBuilder()
         .withInput('languages', 'English, Greek')

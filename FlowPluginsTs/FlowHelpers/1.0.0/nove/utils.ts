@@ -2,7 +2,13 @@
 Shared/common utilities. This module should contain PURE functions!!!
 */
 
+import LanguageSet from './languages';
 import { err, ok, Result } from './types';
+
+interface LanguageCodeParseOptions {
+  acceptEmpty?: boolean
+  lowercase?: boolean
+}
 
 export const enumValues = <const T extends Record<string, string>>(obj: T): Array<T[keyof T]> => {
   const values = Object.values(obj);
@@ -19,30 +25,26 @@ export const enumParser = <const T extends Record<string, string>>(obj: T): ((va
 
 export const isValidLanguageCode = (code: string): boolean => code.length === 3;
 
-/**
- * Parses a comma-separated string of values and returns list of normalized and validated ISO 639-3 language codes.
- * https://iso639-3.sil.org/code_tables/639/data
- *
- * @argument acceptEmpty
- * If false, the method returns an error when no languages are found from `value`.
- * If true, the method returns an empty array.
- */
-export const parseLanguageCodes = (value: string, acceptEmpty = false): Result<string[]> => {
-  const languages = value
+export const parseCommaSeparatedValues = (value: string, lowercase = false): string[] => (lowercase
+  ? value
     .split(',')
-    .map((val) => val.trim());
+    .map((val) => val.trim().toLowerCase())
+  : value
+    .split(',')
+    .map((val) => val.trim())
+);
 
-  if (languages.length === 1 && !languages[0]) {
-    return acceptEmpty
-      ? ok([])
-      : err('Languages are empty. Specify at least one language');
+/**
+ * Find one or more keywords in the given value.
+ * @param value The value to search for keywords.
+ * @param keywords A list of keywords.
+ * @returns `true` if one or more keywords are present in the value. `false` otherwise.
+ */
+export const containsKeywords = (value: string | undefined, keywords: string[]): boolean => {
+  if (!value) {
+    return false;
   }
 
-  const invalidLanguages = languages.filter((lang) => !isValidLanguageCode(lang));
-
-  if (invalidLanguages.length > 0) {
-    return err(`Languages [${invalidLanguages.join(', ')}] are invalid ISO 639-3 codes`);
-  }
-
-  return ok(languages);
+  const cleanValue = value.toLowerCase();
+  return keywords.some((keyword) => cleanValue.includes(keyword));
 };

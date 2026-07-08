@@ -1,10 +1,14 @@
 /* eslint-disable no-param-reassign */
-import { IffmpegCommandStream, IpluginDetails } from '../../../../FlowHelpers/1.0.0/interfaces/interfaces';
+import { IpluginDetails } from '../../../../FlowHelpers/1.0.0/interfaces/interfaces';
 import { ffMpegCommandPlugin } from '../../../../FlowHelpers/1.0.0/nove/ffmpeg';
-import { parseLanguageCodes } from '../../../../FlowHelpers/1.0.0/nove/utils';
+import LanguageSet from '../../../../FlowHelpers/1.0.0/nove/languages';
+import {
+  containsKeywords, parseCommaSeparatedValues,
+} from '../../../../FlowHelpers/1.0.0/nove/utils';
 
 const OUT_SUCCESS = 1;
-const OUT_FAIL = 2;
+const OUT_FAIL_LANGUAGE = 2;
+const OUT_FAIL_NO_AUDIO = 3;
 
 /* eslint no-plusplus: ["error", { "allowForLoopAfterthoughts": true }] */
 const details = () :IpluginDetails => ({
@@ -30,6 +34,17 @@ const details = () :IpluginDetails => ({
         type: 'text',
       },
     },
+    {
+      label: 'Keyword Blacklist',
+      name: 'keywords',
+      tooltip: `Comma-separated list of case-insensitive keywords to blacklist.
+      Any keyword present in the title of the audio stream will be excluded`,
+      defaultValue: '',
+      type: 'string',
+      inputUI: {
+        type: 'text',
+      },
+    },
   ],
   outputs: [
     {
@@ -37,23 +52,22 @@ const details = () :IpluginDetails => ({
       tooltip: 'Audio streams with the specified languages were found',
     },
     {
-      number: OUT_FAIL,
-      tooltip: 'audio streams with the specified languages were not found',
+      number: OUT_FAIL_LANGUAGE,
+      tooltip: 'Audio streams with the specified languages were not found',
+    },
+    {
+      number: OUT_FAIL_NO_AUDIO,
+      tooltip: 'All audio streams were going to be discarded, leaving the media without audio',
     },
   ],
 });
 
-const hasWantedLanguage = (stream: IffmpegCommandStream, languages: string[]): boolean => {
-  if (stream.tags?.language === undefined) {
-    return false;
-  }
-
-  const cleanLanguageTag = stream.tags.language.toLowerCase();
-  return languages.includes(cleanLanguageTag);
-};
-
 const plugin = ffMpegCommandPlugin(details, (args) => {
-  const languagesResult = parseLanguageCodes(String(args.inputs.languages));
+  const languagesResult = LanguageSet.from(parseCommaSeparatedValues(String(args.inputs.languages)), {
+    acceptEmptyList: true,
+  });
+
+  const keywords = parseCommaSeparatedValues(String(args.inputs.keywords), true);
 
   if (!languagesResult.ok) {
     throw new Error(languagesResult.error);
@@ -63,26 +77,49 @@ const plugin = ffMpegCommandPlugin(details, (args) => {
 
   const command = args.variables.ffmpegCommand;
 
-  args.jobLog(`Got ${languages.length} languages to keep: [${languages.join(', ')}]`);
+  if (languages.length > 0) {
+    args.jobLog(`Got ${languages.length} languages to keep: [${languages.toString()}]`);
+  }
+
+  args.jobLog(`Got ${keywords.length} keywords to blacklist: [${keywords.join(', ')}]`);
 
   const audioStreams = command.streams
     .filter((stream) => stream.codec_type === 'audio');
 
-  const streamsToExclude = audioStreams
-    .filter((stream) => !hasWantedLanguage(stream, languages));
+  const streamsToExcludeLanguage = languages.length > 0
+    ? audioStreams
+      .filter((stream) => !languages.contain(stream.tags?.language))
+    : [];
 
-  if (streamsToExclude.length === audioStreams.length) {
-    args.jobLog(`Current media does not contain audio streams with languages: ${languages.join(', ')}`);
+  if (streamsToExcludeLanguage.length === audioStreams.length) {
+    args.jobLog(`Current media does not contain audio streams with languages: ${languages.toString()}`);
     return {
       outputFileObj: args.inputFileObj,
-      outputNumber: OUT_FAIL,
+      outputNumber: OUT_FAIL_LANGUAGE,
       variables: args.variables,
     };
   }
 
-  args.jobLog(`Discarding ${streamsToExclude.length} out of ${audioStreams.length} audio streams`);
+  const streamsToExcludeKeywords = audioStreams
+    .filter((stream) => containsKeywords(stream.tags?.title, keywords));
 
-  streamsToExclude.forEach((stream) => {
+  const totalStreamsToExclude = new Set([
+    ...streamsToExcludeKeywords,
+    ...streamsToExcludeLanguage,
+  ]);
+
+  if (totalStreamsToExclude.size === audioStreams.length) {
+    args.jobLog('Current filtering setup with given languages and keywords would wipe all audio. Failing defensively');
+    return {
+      outputFileObj: args.inputFileObj,
+      outputNumber: OUT_FAIL_NO_AUDIO,
+      variables: args.variables,
+    };
+  }
+
+  args.jobLog(`Discarding ${totalStreamsToExclude.size} out of ${audioStreams.length} audio streams`);
+
+  totalStreamsToExclude.forEach((stream) => {
     args.jobLog(`Discarding "${stream.tags?.title ?? '?'}", lang=${stream.tags?.language}`);
     stream.removed = true;
   });
