@@ -108,17 +108,19 @@ var SonarrClient = /** @class */ (function () {
     SonarrClient.prototype.parseLanguage = function (language) {
         return SONARR_LANGUAGE_ID_TO_FFMPEG[language.id];
     };
+    // https://sonarr.tv/docs/api/#v3/tag/serieslookup
     SonarrClient.prototype.getByTmdbId = function (tmdbId) {
         return __awaiter(this, void 0, void 0, function () {
-            var response, seriesInfo;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
+            var response, seriesInfo, match;
+            var _a;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
                     case 0: return [4 /*yield*/, fetch(this.getApiPath("series/lookup?term=tmdb:".concat(tmdbId)), {
                             method: 'GET',
                             headers: this.defaultHeaders(),
                         })];
                     case 1:
-                        response = _a.sent();
+                        response = _b.sent();
                         if (response.status === 404) {
                             return [2 /*return*/, (0, types_1.err)("Series with TMDB ID \"".concat(tmdbId, "\" does not exist in Sonarr"))];
                         }
@@ -127,8 +129,13 @@ var SonarrClient = /** @class */ (function () {
                         }
                         return [4 /*yield*/, response.json()];
                     case 2:
-                        seriesInfo = _a.sent();
-                        return [2 /*return*/, (0, types_1.ok)(seriesInfo)];
+                        seriesInfo = _b.sent();
+                        // Double check it actually is an array before returning
+                        if (!Array.isArray(seriesInfo) || seriesInfo.length === 0) {
+                            return [2 /*return*/, (0, types_1.err)("No series found for TMDB ID \"".concat(tmdbId, "\""))];
+                        }
+                        match = (_a = seriesInfo.find(function (s) { return s.tmdbId === Number(tmdbId); })) !== null && _a !== void 0 ? _a : seriesInfo[0];
+                        return [2 /*return*/, (0, types_1.ok)(match)];
                 }
             });
         });
