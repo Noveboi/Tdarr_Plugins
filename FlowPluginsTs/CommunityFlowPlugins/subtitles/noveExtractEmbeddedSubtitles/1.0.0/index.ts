@@ -1,10 +1,10 @@
 /* eslint-disable no-param-reassign */
 import { CLI } from '../../../../FlowHelpers/1.0.0/cliUtils';
 import {
-  IffmpegCommandStream, IliveSizeCompare, IpluginDetails, IpluginInputArgs,
+  IliveSizeCompare, IpluginDetails, IpluginInputArgs,
   IpluginOutputArgs,
 } from '../../../../FlowHelpers/1.0.0/interfaces/interfaces';
-import { IFileObject } from '../../../../FlowHelpers/1.0.0/interfaces/synced/IFileObject';
+import { IFileObject, Istreams } from '../../../../FlowHelpers/1.0.0/interfaces/synced/IFileObject';
 import getSubtitleAction, { BitmapHandling } from '../../../../FlowHelpers/1.0.0/nove/subtitles';
 import { err, ok, Result } from '../../../../FlowHelpers/1.0.0/nove/types';
 import { enumParser } from '../../../../FlowHelpers/1.0.0/nove/utils';
@@ -51,13 +51,13 @@ const details = () :IpluginDetails => ({
   ],
 });
 
-const displaySubtitleLanguages = (streams: readonly IffmpegCommandStream[]): string => streams
+const displaySubtitleLanguages = (streams: readonly Istreams[]): string => streams
   .map((s) => s.tags?.language ?? '?')
   .join(', ');
 
 const createSubtitleFilename = (
   fileObj: IFileObject,
-  stream: IffmpegCommandStream,
+  stream: Istreams,
   extension: string,
 ): Result<string> => {
   const filename = fileObj.file;
@@ -131,16 +131,36 @@ const executeCliCommand = async (
   return err(res.errorLogFull);
 };
 
+const getSubtitleStreams = (args: IpluginInputArgs): Result<Istreams[]> => {
+  if (args.variables.ffmpegCommand.init) {
+    return ok(args.variables.ffmpegCommand.streams.filter((s) => s.codec_type === 'subtitle' && !s.removed));
+  }
+
+  if (args.inputFileObj.ffProbeData.streams === undefined) {
+    return err('No ffprobe data for input file');
+  }
+
+  return ok(args.inputFileObj.ffProbeData.streams.filter((s) => s.codec_name === 'subtitle'));
+};
+
 const plugin = async (args: IpluginInputArgs): Promise<IpluginOutputArgs> => {
-  const bitmapSubtitleHandling = String(args.inputs?.bitmapSubtitleHandling ?? BitmapHandling.SKIP).trim();
+  const lib = require('../../../../../methods/lib')();
+  args.inputs = lib.loadDefaultValues(args.inputs, details);
+
+  const bitmapSubtitleHandling = String(args.inputs.bitmapSubtitleHandling).trim();
   const bitmapHandlingResult = enumParser(BitmapHandling)(bitmapSubtitleHandling);
 
   if (!bitmapHandlingResult.ok) {
     throw new Error(bitmapHandlingResult.error);
   }
 
-  const subtitleStreams = args.variables.ffmpegCommand.streams
-    .filter((s) => s.codec_type === 'subtitle');
+  const subtitleStreamsResult = getSubtitleStreams(args);
+
+  if (!subtitleStreamsResult.ok) {
+    throw new Error(subtitleStreamsResult.error);
+  }
+
+  const subtitleStreams = subtitleStreamsResult.value;
 
   if (subtitleStreams.length === 0) {
     args.jobLog('No subtitles found, exiting');

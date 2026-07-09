@@ -185,19 +185,32 @@ var executeCliCommand = function (args, spawnArgs, outputFilenames) { return __a
         }
     });
 }); };
+var getSubtitleStreams = function (args) {
+    if (args.variables.ffmpegCommand.init) {
+        return (0, types_1.ok)(args.variables.ffmpegCommand.streams.filter(function (s) { return s.codec_type === 'subtitle' && !s.removed; }));
+    }
+    if (args.inputFileObj.ffProbeData.streams === undefined) {
+        return (0, types_1.err)('No ffprobe data for input file');
+    }
+    return (0, types_1.ok)(args.inputFileObj.ffProbeData.streams.filter(function (s) { return s.codec_name === 'subtitle'; }));
+};
 var plugin = function (args) { return __awaiter(void 0, void 0, void 0, function () {
-    var bitmapSubtitleHandling, bitmapHandlingResult, subtitleStreams, spawnArgs, outputFilenames, executeResult;
-    var _a, _b;
-    return __generator(this, function (_c) {
-        switch (_c.label) {
+    var lib, bitmapSubtitleHandling, bitmapHandlingResult, subtitleStreamsResult, subtitleStreams, spawnArgs, outputFilenames, executeResult;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
             case 0:
-                bitmapSubtitleHandling = String((_b = (_a = args.inputs) === null || _a === void 0 ? void 0 : _a.bitmapSubtitleHandling) !== null && _b !== void 0 ? _b : subtitles_1.BitmapHandling.SKIP).trim();
+                lib = require('../../../../../methods/lib')();
+                args.inputs = lib.loadDefaultValues(args.inputs, details);
+                bitmapSubtitleHandling = String(args.inputs.bitmapSubtitleHandling).trim();
                 bitmapHandlingResult = (0, utils_1.enumParser)(subtitles_1.BitmapHandling)(bitmapSubtitleHandling);
                 if (!bitmapHandlingResult.ok) {
                     throw new Error(bitmapHandlingResult.error);
                 }
-                subtitleStreams = args.variables.ffmpegCommand.streams
-                    .filter(function (s) { return s.codec_type === 'subtitle'; });
+                subtitleStreamsResult = getSubtitleStreams(args);
+                if (!subtitleStreamsResult.ok) {
+                    throw new Error(subtitleStreamsResult.error);
+                }
+                subtitleStreams = subtitleStreamsResult.value;
                 if (subtitleStreams.length === 0) {
                     args.jobLog('No subtitles found, exiting');
                     return [2 /*return*/, {
@@ -235,7 +248,7 @@ var plugin = function (args) { return __awaiter(void 0, void 0, void 0, function
                 }
                 return [4 /*yield*/, executeCliCommand(args, spawnArgs, outputFilenames)];
             case 1:
-                executeResult = _c.sent();
+                executeResult = _a.sent();
                 if (executeResult.ok) {
                     return [2 /*return*/, {
                             outputNumber: 1,
