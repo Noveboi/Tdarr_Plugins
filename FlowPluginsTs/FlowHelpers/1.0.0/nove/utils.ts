@@ -2,21 +2,17 @@
 Shared/common utilities. This module should contain PURE functions!!!
 */
 
-import LanguageSet from './languages';
 import { err, ok, Result } from './types';
 
-interface LanguageCodeParseOptions {
-  acceptEmpty?: boolean
-  lowercase?: boolean
-}
-
-export const enumValues = <const T extends Record<string, string>>(obj: T): Array<T[keyof T]> => {
-  const values = Object.values(obj);
+export const enumValues = <const T extends Record<string, string>>(type: T): Array<T[keyof T]> => {
+  const values = Object.values(type);
   return values as Array<T[keyof T]>;
 };
 
-export const enumParser = <const T extends Record<string, string>>(obj: T): ((value: string) => Result<T[keyof T]>) => {
-  const values = new Set(enumValues(obj));
+export const enumParser = <const T extends Record<string, string>>(
+  type: T,
+): ((value: string) => Result<T[keyof T]>) => {
+  const values = new Set(enumValues(type));
 
   return (value: string) => (values.has(value as T[keyof T])
     ? ok(value as T[keyof T])

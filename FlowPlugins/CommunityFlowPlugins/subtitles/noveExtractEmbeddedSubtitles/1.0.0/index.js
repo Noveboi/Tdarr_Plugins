@@ -10,6 +10,39 @@ var __assign = (this && this.__assign) || function () {
     };
     return __assign.apply(this, arguments);
 };
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -50,7 +83,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.details = exports.plugin = void 0;
 /* eslint-disable no-param-reassign */
 var cliUtils_1 = require("../../../../FlowHelpers/1.0.0/cliUtils");
+var subtitles_1 = __importStar(require("../../../../FlowHelpers/1.0.0/nove/subtitles"));
 var types_1 = require("../../../../FlowHelpers/1.0.0/nove/types");
+var utils_1 = require("../../../../FlowHelpers/1.0.0/nove/utils");
 /* eslint no-plusplus: ["error", { "allowForLoopAfterthoughts": true }] */
 var details = function () { return ({
     name: 'Extract Embedded Subtitles',
@@ -64,7 +99,19 @@ var details = function () { return ({
     requiresVersion: '2.11.01',
     sidebarPosition: -1,
     icon: 'faLanguage',
-    inputs: [],
+    inputs: [
+        {
+            label: 'Bitmap Subtitle Handling',
+            name: 'bitmapSubtitleHandling',
+            tooltip: 'Choose how to handle bitmap subtitles (very common in anime)',
+            type: 'string',
+            defaultValue: 'skip',
+            inputUI: {
+                type: 'dropdown',
+                options: ['skip', 'extract_sup'],
+            },
+        },
+    ],
     outputs: [
         {
             number: 1,
@@ -74,25 +121,32 @@ var details = function () { return ({
             number: 2,
             tooltip: 'Did not found any subtitles, did nothing',
         },
+        {
+            number: 3,
+            tooltip: 'Extraction failed due to ffmpeg error',
+        },
     ],
 }); };
 exports.details = details;
 var displaySubtitleLanguages = function (streams) { return streams
     .map(function (s) { var _a, _b; return (_b = (_a = s.tags) === null || _a === void 0 ? void 0 : _a.language) !== null && _b !== void 0 ? _b : '?'; })
     .join(', '); };
-var createSubtitleFilename = function (fileObj, stream) {
+var createSubtitleFilename = function (fileObj, stream, extension) {
     var _a;
     var filename = fileObj.file;
-    var extension = 'srt';
     var language = (_a = stream.tags) === null || _a === void 0 ? void 0 : _a.language;
     if (!language) {
         return (0, types_1.err)('No language defined for subtitle');
     }
+    var cleanLanguage = language
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]/gi, '_')
+        .slice(0, 16);
     var extensionIndex = filename.lastIndexOf('.');
-    var filenameWithoutExtension = extensionIndex === -1
+    var base = extensionIndex === -1
         ? filename
         : filename.substring(0, extensionIndex);
-    return (0, types_1.ok)("".concat(filenameWithoutExtension, ".").concat(language, ".").concat(extension));
+    return (0, types_1.ok)("".concat(base, ".").concat(cleanLanguage, ".track").concat(stream.index, ".").concat(extension));
 };
 var executeCliCommand = function (args, spawnArgs, outputFilenames) { return __awaiter(void 0, void 0, void 0, function () {
     var defaultLiveSizeCompare, cliArgs, cli, res;
@@ -132,10 +186,16 @@ var executeCliCommand = function (args, spawnArgs, outputFilenames) { return __a
     });
 }); };
 var plugin = function (args) { return __awaiter(void 0, void 0, void 0, function () {
-    var subtitleStreams, spawnArgs, outputFilenames, i, stream, outputFilenameResult, filename, executeResult;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
+    var bitmapSubtitleHandling, bitmapHandlingResult, subtitleStreams, spawnArgs, outputFilenames, executeResult;
+    var _a, _b;
+    return __generator(this, function (_c) {
+        switch (_c.label) {
             case 0:
+                bitmapSubtitleHandling = String((_b = (_a = args.inputs) === null || _a === void 0 ? void 0 : _a.bitmapSubtitleHandling) !== null && _b !== void 0 ? _b : subtitles_1.BitmapHandling.SKIP).trim();
+                bitmapHandlingResult = (0, utils_1.enumParser)(subtitles_1.BitmapHandling)(bitmapSubtitleHandling);
+                if (!bitmapHandlingResult.ok) {
+                    throw new Error(bitmapHandlingResult.error);
+                }
                 subtitleStreams = args.variables.ffmpegCommand.streams
                     .filter(function (s) { return s.codec_type === 'subtitle'; });
                 if (subtitleStreams.length === 0) {
@@ -149,21 +209,33 @@ var plugin = function (args) { return __awaiter(void 0, void 0, void 0, function
                 args.jobLog("Found ".concat(subtitleStreams.length, " subtitles to extract: [").concat(displaySubtitleLanguages(subtitleStreams), "]"));
                 spawnArgs = ['-y', '-i', args.inputFileObj.file];
                 outputFilenames = [];
-                for (i = 0; i < subtitleStreams.length; i++) {
-                    stream = subtitleStreams[i];
-                    outputFilenameResult = createSubtitleFilename(args.inputFileObj, stream);
+                subtitleStreams.forEach(function (stream, i) {
+                    var action = (0, subtitles_1.default)(stream.codec_name, bitmapHandlingResult.value);
+                    if (action.action === 'skip') {
+                        args.jobLog("Skipping subtitle #".concat(i, ", reason: ").concat(action.reason));
+                        return;
+                    }
+                    var outputFilenameResult = createSubtitleFilename(args.inputFileObj, stream, action.extension);
                     if (!outputFilenameResult.ok) {
                         args.jobLog("Skipping subtitle #".concat(i, ", reason: ").concat(outputFilenameResult.error));
                     }
                     else {
-                        filename = outputFilenameResult.value;
-                        spawnArgs.push('-map', "0:".concat(stream.index), '-c', 'copy', filename);
+                        var filename = outputFilenameResult.value;
+                        spawnArgs.push('-map', "0:".concat(stream.index), '-c:s', action.codec, filename);
                         outputFilenames.push(filename);
                     }
+                });
+                if (outputFilenames.length === 0) {
+                    args.jobLog('No extractable subtitles found after filtering/skipping');
+                    return [2 /*return*/, {
+                            outputNumber: 2,
+                            outputFileObj: args.inputFileObj,
+                            variables: args.variables,
+                        }];
                 }
                 return [4 /*yield*/, executeCliCommand(args, spawnArgs, outputFilenames)];
             case 1:
-                executeResult = _a.sent();
+                executeResult = _c.sent();
                 if (executeResult.ok) {
                     return [2 /*return*/, {
                             outputNumber: 1,
@@ -174,7 +246,7 @@ var plugin = function (args) { return __awaiter(void 0, void 0, void 0, function
                 args.jobLog('Subtitle extraction failed, continuing without extraction. See errors below for more information');
                 executeResult.error.forEach(function (error) { return args.jobLog(error); });
                 return [2 /*return*/, {
-                        outputNumber: 2,
+                        outputNumber: 3,
                         outputFileObj: args.inputFileObj,
                         variables: args.variables,
                     }];

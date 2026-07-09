@@ -5,7 +5,9 @@ import {
   IpluginOutputArgs,
 } from '../../../../FlowHelpers/1.0.0/interfaces/interfaces';
 import { IFileObject } from '../../../../FlowHelpers/1.0.0/interfaces/synced/IFileObject';
+import getSubtitleAction, { BitmapHandling } from '../../../../FlowHelpers/1.0.0/nove/subtitles';
 import { err, ok, Result } from '../../../../FlowHelpers/1.0.0/nove/types';
+import { enumParser } from '../../../../FlowHelpers/1.0.0/nove/utils';
 
 /* eslint no-plusplus: ["error", { "allowForLoopAfterthoughts": true }] */
 const details = () :IpluginDetails => ({
@@ -20,7 +22,19 @@ const details = () :IpluginDetails => ({
   requiresVersion: '2.11.01',
   sidebarPosition: -1,
   icon: 'faLanguage',
-  inputs: [],
+  inputs: [
+    {
+      label: 'Bitmap Subtitle Handling',
+      name: 'bitmapSubtitleHandling',
+      tooltip: 'Choose how to handle bitmap subtitles (very common in anime)',
+      type: 'string',
+      defaultValue: 'skip',
+      inputUI: {
+        type: 'dropdown',
+        options: ['skip', 'extract_sup'],
+      },
+    },
+  ],
   outputs: [
     {
       number: 1,
@@ -30,6 +44,10 @@ const details = () :IpluginDetails => ({
       number: 2,
       tooltip: 'Did not found any subtitles, did nothing',
     },
+    {
+      number: 3,
+      tooltip: 'Extraction failed due to ffmpeg error',
+    },
   ],
 });
 
@@ -37,21 +55,29 @@ const displaySubtitleLanguages = (streams: readonly IffmpegCommandStream[]): str
   .map((s) => s.tags?.language ?? '?')
   .join(', ');
 
-const createSubtitleFilename = (fileObj: IFileObject, stream: IffmpegCommandStream): Result<string> => {
+const createSubtitleFilename = (
+  fileObj: IFileObject,
+  stream: IffmpegCommandStream,
+  extension: string,
+): Result<string> => {
   const filename = fileObj.file;
-  const extension = 'srt';
   const language = stream.tags?.language;
 
   if (!language) {
     return err('No language defined for subtitle');
   }
 
+  const cleanLanguage = language
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/gi, '_')
+    .slice(0, 16);
+
   const extensionIndex = filename.lastIndexOf('.');
-  const filenameWithoutExtension = extensionIndex === -1
+  const base = extensionIndex === -1
     ? filename
     : filename.substring(0, extensionIndex);
 
-  return ok(`${filenameWithoutExtension}.${language}.${extension}`);
+  return ok(`${base}.${cleanLanguage}.track${stream.index}.${extension}`);
 };
 
 const executeCliCommand = async (
@@ -106,6 +132,13 @@ const executeCliCommand = async (
 };
 
 const plugin = async (args: IpluginInputArgs): Promise<IpluginOutputArgs> => {
+  const bitmapSubtitleHandling = String(args.inputs?.bitmapSubtitleHandling ?? BitmapHandling.SKIP).trim();
+  const bitmapHandlingResult = enumParser(BitmapHandling)(bitmapSubtitleHandling);
+
+  if (!bitmapHandlingResult.ok) {
+    throw new Error(bitmapHandlingResult.error);
+  }
+
   const subtitleStreams = args.variables.ffmpegCommand.streams
     .filter((s) => s.codec_type === 'subtitle');
 
@@ -123,17 +156,32 @@ const plugin = async (args: IpluginInputArgs): Promise<IpluginOutputArgs> => {
   const spawnArgs: string[] = ['-y', '-i', args.inputFileObj.file];
   const outputFilenames: string[] = [];
 
-  for (let i = 0; i < subtitleStreams.length; i++) {
-    const stream = subtitleStreams[i];
-    const outputFilenameResult = createSubtitleFilename(args.inputFileObj, stream);
+  subtitleStreams.forEach((stream, i) => {
+    const action = getSubtitleAction(stream.codec_name, bitmapHandlingResult.value);
+
+    if (action.action === 'skip') {
+      args.jobLog(`Skipping subtitle #${i}, reason: ${action.reason}`);
+      return;
+    }
+
+    const outputFilenameResult = createSubtitleFilename(args.inputFileObj, stream, action.extension);
 
     if (!outputFilenameResult.ok) {
       args.jobLog(`Skipping subtitle #${i}, reason: ${outputFilenameResult.error}`);
     } else {
       const filename = outputFilenameResult.value;
-      spawnArgs.push('-map', `0:${stream.index}`, '-c', 'copy', filename);
+      spawnArgs.push('-map', `0:${stream.index}`, '-c:s', action.codec, filename);
       outputFilenames.push(filename);
     }
+  });
+
+  if (outputFilenames.length === 0) {
+    args.jobLog('No extractable subtitles found after filtering/skipping');
+    return {
+      outputNumber: 2,
+      outputFileObj: args.inputFileObj,
+      variables: args.variables,
+    };
   }
 
   const executeResult = await executeCliCommand(args, spawnArgs, outputFilenames);
@@ -150,7 +198,7 @@ const plugin = async (args: IpluginInputArgs): Promise<IpluginOutputArgs> => {
   executeResult.error.forEach((error) => args.jobLog(error));
 
   return {
-    outputNumber: 2,
+    outputNumber: 3,
     outputFileObj: args.inputFileObj,
     variables: args.variables,
   };
