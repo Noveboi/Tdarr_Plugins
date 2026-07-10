@@ -1,4 +1,6 @@
 /* eslint-disable no-param-reassign */
+import { promises as fs } from 'fs';
+import path from 'path';
 import { CLI } from '../../../../FlowHelpers/1.0.0/cliUtils';
 import {
   IliveSizeCompare, IpluginDetails, IpluginInputArgs,
@@ -12,7 +14,11 @@ import { enumParser } from '../../../../FlowHelpers/1.0.0/nove/utils';
 /* eslint no-plusplus: ["error", { "allowForLoopAfterthoughts": true }] */
 const details = () :IpluginDetails => ({
   name: 'Extract Embedded Subtitles',
-  description: 'Extract subtitle tracks to separate files',
+  description: `Extract subtitle tracks to separate files.
+  NOTE: This does not guarantee ALL subtitles are extracted. For example, bitmap subtitles (such as PGS)
+  are handled differently and could be skipped entirely.
+
+  Do not blindly remove all subtitles after extraction, as it may result in unwanted data loss.`,
   style: {
     borderColor: '#6efefc',
   },
@@ -26,12 +32,28 @@ const details = () :IpluginDetails => ({
     {
       label: 'Bitmap Subtitle Handling',
       name: 'bitmapSubtitleHandling',
-      tooltip: 'Choose how to handle bitmap subtitles (very common in anime)',
+      tooltip: `Choose how to handle bitmap subtitles (very common in anime)
+
+      As it stands (2026-07-10), external bitmap subtitles (PGS, etc...) do not play well with
+      streaming clients such as Jellyfin. It is therefore recommended to
+      leave the option as 'skip' and have them remain embedded.`,
       type: 'string',
       defaultValue: 'skip',
       inputUI: {
         type: 'dropdown',
         options: ['skip', 'extract_sup'],
+      },
+    },
+    {
+      label: 'Extraction Directory',
+      name: 'extractDir',
+      tooltip: `The directory where the extracted subtitle files should be placed.
+
+      Use the keyword "original" to use the original media file directory as the extraction point.`,
+      type: 'string',
+      defaultValue: 'original',
+      inputUI: {
+        type: 'text',
       },
     },
   ],
@@ -46,7 +68,7 @@ const details = () :IpluginDetails => ({
     },
     {
       number: 3,
-      tooltip: 'Extraction failed due to ffmpeg error',
+      tooltip: 'One or more subtitles were skipped and not extracted',
     },
   ],
 });
@@ -58,9 +80,10 @@ const displaySubtitleLanguages = (streams: readonly Istreams[]): string => strea
 const createSubtitleFilename = (
   fileObj: IFileObject,
   stream: Istreams,
+  index: number,
   extension: string,
+  extractDirectory: string,
 ): Result<string> => {
-  const filename = fileObj.file;
   const language = stream.tags?.language;
 
   if (!language) {
@@ -72,12 +95,22 @@ const createSubtitleFilename = (
     .replace(/[^a-z0-9_-]/gi, '_')
     .slice(0, 16);
 
-  const extensionIndex = filename.lastIndexOf('.');
-  const base = extensionIndex === -1
-    ? filename
-    : filename.substring(0, extensionIndex);
+  if (!cleanLanguage) {
+    return err('Subtitle language is empty after filename sanitization');
+  }
 
-  return ok(`${base}.${cleanLanguage}.track${stream.index}.${extension}`);
+  const inputFilename = path.basename(fileObj.file);
+  const inputExtension = path.extname(inputFilename);
+
+  const mediaBase = inputExtension
+    ? inputFilename.slice(0, -inputExtension.length)
+    : inputFilename;
+
+  const subtitleFilename = `${mediaBase}.${cleanLanguage}.track${index}.${extension}`;
+
+  return ok(extractDirectory
+    ? path.join(extractDirectory, subtitleFilename)
+    : subtitleFilename);
 };
 
 const executeCliCommand = async (
@@ -131,24 +164,69 @@ const executeCliCommand = async (
   return err(res.errorLogFull);
 };
 
-const getSubtitleStreams = (args: IpluginInputArgs): Result<Istreams[]> => {
-  if (args.variables.ffmpegCommand.init) {
-    return ok(args.variables.ffmpegCommand.streams.filter((s) => s.codec_type === 'subtitle' && !s.removed));
+const getSubtitleStreams = (args: IpluginInputArgs): Result<Istreams[]> => ok(args.variables.ffmpegCommand.streams
+  .filter((s) => s.codec_type === 'subtitle' && !s.removed));
+
+const validateExtractionDirectory = async (
+  args: IpluginInputArgs,
+  extractDirectoryInput: string,
+): Promise<Result<string>> => {
+  const extractDirectory = extractDirectoryInput.trim();
+
+  if (!extractDirectory) {
+    return err('Extraction directory cannot be empty');
   }
 
-  if (args.inputFileObj.ffProbeData.streams === undefined) {
-    return err('No ffprobe data for input file');
+  if (extractDirectory === 'original') {
+    const dir = path.dirname(args.originalLibraryFile.file);
+    args.jobLog(`Using original directory as extraction directory: ${dir}`);
+
+    return ok(dir);
   }
 
-  return ok(args.inputFileObj.ffProbeData.streams.filter((s) => s.codec_name === 'subtitle'));
+  const resolvedDirectory = path.resolve(extractDirectory);
+
+  try {
+    const stats = await fs.stat(resolvedDirectory);
+
+    if (!stats.isDirectory()) {
+      return err(`Extraction path is not a directory: ${resolvedDirectory}`);
+    }
+
+    return ok(resolvedDirectory);
+  } catch (error) {
+    const fileError = error as NodeJS.ErrnoException;
+
+    if (fileError.code === 'ENOENT') {
+      return err(`Extraction directory does not exist: ${resolvedDirectory}`);
+    }
+
+    if (fileError.code === 'EACCES') {
+      return err(`Extraction directory cannot be accessed: ${resolvedDirectory}`);
+    }
+
+    return err(
+      `Unable to inspect extraction directory "${resolvedDirectory}": `
+      + `${fileError.message}`,
+    );
+  }
 };
 
 const plugin = async (args: IpluginInputArgs): Promise<IpluginOutputArgs> => {
   const lib = require('../../../../../methods/lib')();
   args.inputs = lib.loadDefaultValues(args.inputs, details);
 
+  const extractDirectoryInput = String(args.inputs.extractDir).trim();
   const bitmapSubtitleHandling = String(args.inputs.bitmapSubtitleHandling).trim();
   const bitmapHandlingResult = enumParser(BitmapHandling)(bitmapSubtitleHandling);
+
+  const directoryValidation = await validateExtractionDirectory(args, extractDirectoryInput);
+
+  if (!directoryValidation.ok) {
+    throw new Error(directoryValidation.error);
+  }
+
+  const extractDirectory = directoryValidation.value;
 
   if (!bitmapHandlingResult.ok) {
     throw new Error(bitmapHandlingResult.error);
@@ -173,32 +251,38 @@ const plugin = async (args: IpluginInputArgs): Promise<IpluginOutputArgs> => {
 
   args.jobLog(`Found ${subtitleStreams.length} subtitles to extract: [${displaySubtitleLanguages(subtitleStreams)}]`);
 
-  const spawnArgs: string[] = ['-y', '-i', args.inputFileObj.file];
+  const spawnArgs: string[] = ['-n', '-i', args.inputFileObj.file];
   const outputFilenames: string[] = [];
+  let intentionalSkipFlag = false;
 
   subtitleStreams.forEach((stream, i) => {
     const action = getSubtitleAction(stream.codec_name, bitmapHandlingResult.value);
 
     if (action.action === 'skip') {
       args.jobLog(`Skipping subtitle #${i}, reason: ${action.reason}`);
+      intentionalSkipFlag = true;
       return;
     }
 
-    const outputFilenameResult = createSubtitleFilename(args.inputFileObj, stream, action.extension);
+    const outputFilenameResult = createSubtitleFilename(
+      args.inputFileObj, stream, i, action.extension, extractDirectory,
+    );
 
     if (!outputFilenameResult.ok) {
       args.jobLog(`Skipping subtitle #${i}, reason: ${outputFilenameResult.error}`);
-    } else {
-      const filename = outputFilenameResult.value;
-      spawnArgs.push('-map', `0:${stream.index}`, '-c:s', action.codec, filename);
-      outputFilenames.push(filename);
+      return;
     }
+
+    const filename = outputFilenameResult.value;
+
+    spawnArgs.push('-map', `0:${stream.index}`, '-c:s', action.codec, filename);
+    outputFilenames.push(filename);
   });
 
   if (outputFilenames.length === 0) {
-    args.jobLog('No extractable subtitles found after filtering/skipping');
+    args.jobLog('No extractable subtitles found');
     return {
-      outputNumber: 2,
+      outputNumber: intentionalSkipFlag ? 3 : 2,
       outputFileObj: args.inputFileObj,
       variables: args.variables,
     };
@@ -207,21 +291,23 @@ const plugin = async (args: IpluginInputArgs): Promise<IpluginOutputArgs> => {
   const executeResult = await executeCliCommand(args, spawnArgs, outputFilenames);
 
   if (executeResult.ok) {
-    return {
-      outputNumber: 1,
-      outputFileObj: args.inputFileObj,
-      variables: args.variables,
-    };
+    return intentionalSkipFlag
+      ? {
+        outputNumber: 3,
+        outputFileObj: args.inputFileObj,
+        variables: args.variables,
+      }
+      : {
+        outputNumber: 1,
+        outputFileObj: args.inputFileObj,
+        variables: args.variables,
+      };
   }
 
   args.jobLog('Subtitle extraction failed, continuing without extraction. See errors below for more information');
   executeResult.error.forEach((error) => args.jobLog(error));
 
-  return {
-    outputNumber: 3,
-    outputFileObj: args.inputFileObj,
-    variables: args.variables,
-  };
+  throw new Error('Subtitle extraction failed, see errors in log');
 };
 
 export { plugin, details };

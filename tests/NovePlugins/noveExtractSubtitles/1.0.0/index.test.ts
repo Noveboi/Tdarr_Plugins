@@ -1,9 +1,13 @@
+import { promises as fs } from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import {
   plugin as sut,
 } from '../../../../FlowPluginsTs/CommunityFlowPlugins/subtitles/noveExtractEmbeddedSubtitles/1.0.0/index';
 import { CLI } from '../../../../FlowPluginsTs/FlowHelpers/1.0.0/cliUtils';
 
 import { PluginInputArgsBuilder } from '../../../../FlowPluginsTs/FlowHelpers/1.0.0/nove/pluginHelper';
+import { BitmapHandling } from '../../../../FlowPluginsTs/FlowHelpers/1.0.0/nove/subtitles';
 
 jest.mock('../../../../FlowPluginsTs/FlowHelpers/1.0.0/cliUtils', () => ({
   CLI: jest.fn().mockImplementation(() => ({
@@ -40,6 +44,18 @@ describe('Embedded Subtitle Extraction', () => {
     return args;
   };
 
+  const temporaryDirectories: string[] = [];
+
+  const createTemporaryDirectory = async (): Promise<string> => {
+    const directory = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'tdarr-subtitle-test-'),
+    );
+
+    temporaryDirectories.push(directory);
+
+    return directory;
+  };
+
   beforeEach(() => {
     const cli = require('../../../../FlowPluginsTs/FlowHelpers/1.0.0/cliUtils').CLI;
 
@@ -48,7 +64,16 @@ describe('Embedded Subtitle Extraction', () => {
     }));
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await Promise.all(
+      temporaryDirectories
+        .splice(0)
+        .map((directory) => fs.rm(directory, {
+          recursive: true,
+          force: true,
+        })),
+    );
+
     jest.clearAllMocks();
   });
 
@@ -85,7 +110,7 @@ describe('Embedded Subtitle Extraction', () => {
       expect(cli.mock.calls.length).toBe(1);
       expect(spawnArgs).toEqual(
         expect.arrayContaining([
-          '-y',
+          '-n',
           '-i',
           'Gladiator (2000).mkv',
           '-map',
@@ -262,14 +287,11 @@ describe('Embedded Subtitle Extraction', () => {
       const cli = getCli();
 
       expect(cli.mock.calls.length).toBe(0);
-      expect(output.outputNumber).toBe(2);
+      expect(output.outputNumber).toBe(3);
       expect(output.outputFileObj).toBe(args.inputFileObj);
 
       expect(args.jobLog).toHaveBeenCalledWith(
         'Skipping subtitle #0, reason: PGS is bitmap-based, OCR is required for SRT',
-      );
-      expect(args.jobLog).toHaveBeenCalledWith(
-        'No extractable subtitles found after filtering/skipping',
       );
     });
 
@@ -349,13 +371,10 @@ describe('Embedded Subtitle Extraction', () => {
       const cli = getCli();
 
       expect(cli.mock.calls.length).toBe(0);
-      expect(output.outputNumber).toBe(2);
+      expect(output.outputNumber).toBe(3);
 
       expect(args.jobLog).toHaveBeenCalledWith(
         'Skipping subtitle #0, reason: dvd_subtitle is bitmap-based, OCR or format-specific extraction is required',
-      );
-      expect(args.jobLog).toHaveBeenCalledWith(
-        'No extractable subtitles found after filtering/skipping',
       );
     });
 
@@ -374,10 +393,11 @@ describe('Embedded Subtitle Extraction', () => {
 
       const output = await sut(args);
       const cli = getCli();
-      const spawnArgs = getSpawnArgs(cli);
 
       expect(cli.mock.calls.length).toBe(1);
-      expect(output.outputNumber).toBe(1);
+      expect(output.outputNumber).toBe(3);
+
+      const spawnArgs = getSpawnArgs(cli);
 
       expect(spawnArgs).toEqual(
         expect.arrayContaining([
@@ -407,13 +427,10 @@ describe('Embedded Subtitle Extraction', () => {
       const cli = getCli();
 
       expect(cli.mock.calls.length).toBe(0);
-      expect(output.outputNumber).toBe(2);
+      expect(output.outputNumber).toBe(3);
 
       expect(args.jobLog).toHaveBeenCalledWith(
         'Skipping subtitle #0, reason: Unsupported subtitle codec: mov_text',
-      );
-      expect(args.jobLog).toHaveBeenCalledWith(
-        'No extractable subtitles found after filtering/skipping',
       );
     });
 
@@ -430,13 +447,10 @@ describe('Embedded Subtitle Extraction', () => {
       const cli = getCli();
 
       expect(cli.mock.calls.length).toBe(0);
-      expect(output.outputNumber).toBe(2);
+      expect(output.outputNumber).toBe(3);
 
       expect(args.jobLog).toHaveBeenCalledWith(
         'Skipping subtitle #0, reason: Unsupported subtitle codec: ?',
-      );
-      expect(args.jobLog).toHaveBeenCalledWith(
-        'No extractable subtitles found after filtering/skipping',
       );
     });
 
@@ -461,11 +475,14 @@ describe('Embedded Subtitle Extraction', () => {
       const cli = getCli();
 
       expect(cli.mock.calls.length).toBe(0);
-      expect(output.outputNumber).toBe(2);
+      expect(output.outputNumber).toBe(3);
       expect(output.outputFileObj).toBe(args.inputFileObj);
 
       expect(args.jobLog).toHaveBeenCalledWith(
-        'No extractable subtitles found after filtering/skipping',
+        'Skipping subtitle #0, reason: PGS is bitmap-based, OCR is required for SRT',
+      );
+      expect(args.jobLog).toHaveBeenCalledWith(
+        'Skipping subtitle #1, reason: dvd_subtitle is bitmap-based, OCR or format-specific extraction is required',
       );
     });
   });
@@ -563,6 +580,269 @@ describe('Embedded Subtitle Extraction', () => {
           'Movie Without Extension.eng.track0.srt',
         ]),
       );
+    });
+  });
+
+  describe('extraction directory', () => {
+    it('should extract subtitles into an existing configured directory', async () => {
+      const originalDirectory = await createTemporaryDirectory();
+
+      const args = withInputs(
+        new PluginInputArgsBuilder()
+          .withInputFile(
+            '/temp/tdarr-workDir/job/Project Hail Mary (2026).mkv',
+          )
+          .addSubtitleStream({
+            codec_name: 'subrip',
+            tags: {
+              language: 'ell',
+            },
+          })
+          .build(),
+        {
+          extractDir: originalDirectory,
+          bitmapSubtitleHandling: BitmapHandling.SKIP,
+        },
+      );
+
+      const output = await sut(args);
+      const spawnArgs = getSpawnArgs();
+
+      const expectedOutputPath = path.join(
+        originalDirectory,
+        'Project Hail Mary (2026).ell.track0.srt',
+      );
+
+      expect(output.outputNumber).toBe(1);
+
+      expect(spawnArgs).toEqual(
+        expect.arrayContaining([
+          '-n',
+          '-i',
+          '/temp/tdarr-workDir/job/Project Hail Mary (2026).mkv',
+          '-map',
+          '0:0',
+          '-c:s',
+          'copy',
+          expectedOutputPath,
+        ]),
+      );
+
+      expect(getCliOptions().outputFilePath).toBe(expectedOutputPath);
+    });
+
+    it('should use the configured original directory instead of the transcode cache directory', async () => {
+      const originalDirectory = await createTemporaryDirectory();
+
+      const cachedInputPath = path.join(
+        '/temp',
+        'tdarr-workDir2-job',
+        '12345',
+        'Movie Name.mkv',
+      );
+
+      const args = withInputs(
+        new PluginInputArgsBuilder()
+          .withInputFile(cachedInputPath)
+          .addSubtitleStream({
+            codec_name: 'subrip',
+            tags: {
+              language: 'eng',
+            },
+          })
+          .build(),
+        {
+          extractDir: originalDirectory,
+          bitmapSubtitleHandling: BitmapHandling.SKIP,
+        },
+      );
+
+      const output = await sut(args);
+      const spawnArgs = getSpawnArgs();
+
+      const expectedOutputPath = path.join(
+        originalDirectory,
+        'Movie Name.eng.track0.srt',
+      );
+
+      expect(output.outputNumber).toBe(1);
+      expect(spawnArgs).toContain(expectedOutputPath);
+
+      expect(spawnArgs).not.toContain(
+        path.join(
+          path.dirname(cachedInputPath),
+          'Movie Name.eng.track0.srt',
+        ),
+      );
+    });
+
+    it('should place all extracted subtitle files in the configured directory', async () => {
+      const originalDirectory = await createTemporaryDirectory();
+
+      const args = withInputs(
+        new PluginInputArgsBuilder()
+          .withInputFile('/temp/cache/Multi Subtitle Movie.mkv')
+          .addSubtitleStream({
+            codec_name: 'subrip',
+            tags: {
+              language: 'eng',
+            },
+          })
+          .addSubtitleStream({
+            codec_name: 'ass',
+            tags: {
+              language: 'jpn',
+            },
+          })
+          .build(),
+        {
+          extractDir: originalDirectory,
+          bitmapSubtitleHandling: BitmapHandling.SKIP,
+        },
+      );
+
+      const output = await sut(args);
+      const spawnArgs = getSpawnArgs();
+
+      const expectedEnglishPath = path.join(
+        originalDirectory,
+        'Multi Subtitle Movie.eng.track0.srt',
+      );
+
+      const expectedJapanesePath = path.join(
+        originalDirectory,
+        'Multi Subtitle Movie.jpn.track1.ass',
+      );
+
+      expect(output.outputNumber).toBe(1);
+
+      expect(spawnArgs).toEqual(
+        expect.arrayContaining([
+          expectedEnglishPath,
+          expectedJapanesePath,
+        ]),
+      );
+
+      expect(getCliOptions().outputFilePath).toBe(expectedEnglishPath);
+    });
+
+    it('should trim whitespace around the configured directory', async () => {
+      const originalDirectory = await createTemporaryDirectory();
+
+      const args = withInputs(
+        new PluginInputArgsBuilder()
+          .withInputFile('/temp/cache/Whitespace Movie.mkv')
+          .addSubtitleStream({
+            codec_name: 'subrip',
+            tags: {
+              language: 'eng',
+            },
+          })
+          .build(),
+        {
+          extractDir: `  ${originalDirectory}  `,
+          bitmapSubtitleHandling: BitmapHandling.SKIP,
+        },
+      );
+
+      const output = await sut(args);
+      const spawnArgs = getSpawnArgs();
+
+      expect(output.outputNumber).toBe(1);
+
+      expect(spawnArgs).toContain(
+        path.join(
+          originalDirectory,
+          'Whitespace Movie.eng.track0.srt',
+        ),
+      );
+    });
+
+    it('should accept keyword "original" and resolve it to original directory', async () => {
+      const dir = await createTemporaryDirectory();
+      const args = new PluginInputArgsBuilder()
+        .withInputFile(path.join(dir, 'Movie.mkv'))
+        .withInput('extractDir', 'original')
+        .addSubtitleStream()
+        .build();
+
+      const result = await sut(args);
+
+      expect(result.outputNumber).toBe(1);
+      expect(result.outputFileObj).toBe(args.inputFileObj);
+      expect(result.variables).toBe(args.variables);
+
+      expect(getCli()).toHaveBeenCalled();
+      expect(args.jobLog).toHaveBeenCalledWith(
+        `Using original directory as extraction directory: ${dir}`,
+      );
+    });
+
+    it('should reject an extraction directory that does not exist', async () => {
+      const parentDirectory = await createTemporaryDirectory();
+      const missingDirectory = path.join(
+        parentDirectory,
+        'missing-directory',
+      );
+
+      const args = withInputs(
+        new PluginInputArgsBuilder()
+          .withInputFile('/temp/cache/Movie.mkv')
+          .addSubtitleStream({
+            codec_name: 'subrip',
+            tags: {
+              language: 'eng',
+            },
+          })
+          .build(),
+        {
+          extractDir: missingDirectory,
+          bitmapSubtitleHandling: BitmapHandling.SKIP,
+        },
+      );
+
+      await expect(sut(args)).rejects.toThrow(
+        `Extraction directory does not exist: ${missingDirectory}`,
+      );
+
+      expect(getCli()).not.toHaveBeenCalled();
+
+      // The plugin must not create the configured directory.
+      await expect(fs.stat(missingDirectory)).rejects.toMatchObject({
+        code: 'ENOENT',
+      });
+    });
+
+    it('should reject an extraction path that is a file', async () => {
+      const temporaryDirectory = await createTemporaryDirectory();
+      const filePath = path.join(
+        temporaryDirectory,
+        'not-a-directory',
+      );
+
+      await fs.writeFile(filePath, 'test');
+
+      const args = withInputs(
+        new PluginInputArgsBuilder()
+          .withInputFile('/temp/cache/Movie.mkv')
+          .addSubtitleStream({
+            codec_name: 'subrip',
+            tags: {
+              language: 'eng',
+            },
+          })
+          .build(),
+        {
+          extractDir: filePath,
+          bitmapSubtitleHandling: BitmapHandling.SKIP,
+        },
+      );
+
+      await expect(sut(args)).rejects.toThrow(
+        `Extraction path is not a directory: ${filePath}`,
+      );
+
+      expect(getCli()).not.toHaveBeenCalled();
     });
   });
 
