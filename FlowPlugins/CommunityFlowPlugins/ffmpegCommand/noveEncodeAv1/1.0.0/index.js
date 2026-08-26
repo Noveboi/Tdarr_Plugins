@@ -81,11 +81,35 @@ var details = function () { return ({
         {
             label: 'Variance Boost',
             name: 'varianceBoost',
-            tooltip: 'Increases the quality of low-contrast, dark areas in videos.',
+            tooltip: "Increases the quality of low-contrast, dark areas in videos.\n      NOTE: This increases file size by a lot.",
             defaultValue: 'false',
             type: 'boolean',
             inputUI: {
                 type: 'switch',
+            },
+        },
+        {
+            label: 'Temporal Filtering',
+            name: 'temporalFiltering',
+            tooltip: "Temporal filtering combines information from multiple nearby video frames to\n      create cleaner reference pictures with reduced noise, which helps improve\n      compression quality especially for noisy source material.",
+            defaultValue: 'true',
+            type: 'boolean',
+            inputUI: {
+                type: 'switch',
+            },
+        },
+        {
+            label: 'Sharpness',
+            name: 'sharpness',
+            tooltip: 'Part of the deblocking filter. Higher values (typically [1-2]) lead to better perceptual quality.',
+            defaultValue: '0',
+            type: 'number',
+            inputUI: {
+                type: 'slider',
+                sliderOptions: {
+                    min: 0,
+                    max: 7,
+                },
             },
         },
     ],
@@ -109,13 +133,16 @@ var convertToValidNumber = function (input, min, max, name, type) {
     return value;
 };
 var createParam = function (name, value) { return "".concat(name, "=").concat(value); };
+var boolToInt = function (value) { return (value ? 1 : 0); };
 var plugin = (0, ffmpeg_1.ffMpegCommandPlugin)(details, function (args) {
     var preset = convertToValidNumber(args.inputs.preset, 0, 13, 'Preset');
     var crf = convertToValidNumber(args.inputs.crf, 1, 70, 'CRF');
     var tune = convertToValidNumber(args.inputs.tune, 0, 5, 'Tune');
     var gop = convertToValidNumber(args.inputs.gop, 0.1, 100, 'GOP');
+    var sharpness = convertToValidNumber(args.inputs.sharpness, 0, 7, 'Sharpness');
     var use10Bit = Boolean(args.inputs.bit10);
     var useVarianceBoost = Boolean(args.inputs.varianceBoost);
+    var useTemporalFiltering = Boolean(args.inputs.temporalFiltering);
     args.variables.ffmpegCommand.shouldProcess = true;
     var videoStreams = args.variables.ffmpegCommand.streams
         .filter(function (s) { return s.codec_type === ffmpeg_1.CodecType.VIDEO && s.codec_name !== 'mjpeg'; });
@@ -128,10 +155,11 @@ var plugin = (0, ffmpeg_1.ffMpegCommandPlugin)(details, function (args) {
         var params = [
             createParam('tune', tune),
             createParam('keyint', "".concat(gop, "s")),
+            createParam('enable-variance-boost', boolToInt(useVarianceBoost)),
+            createParam('enable-tf', boolToInt(useTemporalFiltering)),
+            createParam('tf-strength', 1), // constrain to 1, higher values lead to artifacts.
+            createParam('sharpness', sharpness),
         ];
-        if (useVarianceBoost) {
-            params.push(createParam('enable-variance-boost', 1));
-        }
         stream.outputArgs.push('-svtav1-params', params.join(':'));
     });
     return {

@@ -18,7 +18,7 @@ describe('AV1 Encoding', () => {
         expect.arrayContaining(
           [
             '-svtav1-params',
-            'tune=3:keyint=2s:enable-variance-boost=1',
+            'tune=3:keyint=2s:enable-variance-boost=1:enable-tf=1:tf-strength=1:sharpness=0',
           ],
         ),
       );

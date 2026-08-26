@@ -86,11 +86,38 @@ const details = () :IpluginDetails => ({
     {
       label: 'Variance Boost',
       name: 'varianceBoost',
-      tooltip: 'Increases the quality of low-contrast, dark areas in videos.',
+      tooltip: `Increases the quality of low-contrast, dark areas in videos.
+      NOTE: This increases file size by a lot.`,
       defaultValue: 'false',
       type: 'boolean',
       inputUI: {
         type: 'switch',
+      },
+    },
+    {
+      label: 'Temporal Filtering',
+      name: 'temporalFiltering',
+      tooltip: `Temporal filtering combines information from multiple nearby video frames to
+      create cleaner reference pictures with reduced noise, which helps improve
+      compression quality especially for noisy source material.`,
+      defaultValue: 'true',
+      type: 'boolean',
+      inputUI: {
+        type: 'switch',
+      },
+    },
+    {
+      label: 'Sharpness',
+      name: 'sharpness',
+      tooltip: 'Part of the deblocking filter. Higher values (typically [1-2]) lead to better perceptual quality.',
+      defaultValue: '0',
+      type: 'number',
+      inputUI: {
+        type: 'slider',
+        sliderOptions: {
+          min: 0,
+          max: 7,
+        },
       },
     },
   ],
@@ -122,14 +149,18 @@ const convertToValidNumber = (
 };
 
 const createParam = (name: string, value: unknown) => `${name}=${value}`;
+const boolToInt = (value: boolean) => (value ? 1 : 0);
 
 const plugin = ffMpegCommandPlugin(details, (args) => {
   const preset = convertToValidNumber(args.inputs.preset, 0, 13, 'Preset');
   const crf = convertToValidNumber(args.inputs.crf, 1, 70, 'CRF');
   const tune = convertToValidNumber(args.inputs.tune, 0, 5, 'Tune');
   const gop = convertToValidNumber(args.inputs.gop, 0.1, 100, 'GOP');
+  const sharpness = convertToValidNumber(args.inputs.sharpness, 0, 7, 'Sharpness');
+
   const use10Bit = Boolean(args.inputs.bit10);
   const useVarianceBoost = Boolean(args.inputs.varianceBoost);
+  const useTemporalFiltering = Boolean(args.inputs.temporalFiltering);
 
   args.variables.ffmpegCommand.shouldProcess = true;
 
@@ -147,11 +178,11 @@ const plugin = ffMpegCommandPlugin(details, (args) => {
     const params = [
       createParam('tune', tune),
       createParam('keyint', `${gop}s`),
+      createParam('enable-variance-boost', boolToInt(useVarianceBoost)),
+      createParam('enable-tf', boolToInt(useTemporalFiltering)),
+      createParam('tf-strength', 1), // constrain to 1, higher values lead to artifacts.
+      createParam('sharpness', sharpness),
     ];
-
-    if (useVarianceBoost) {
-      params.push(createParam('enable-variance-boost', 1));
-    }
 
     stream.outputArgs.push('-svtav1-params', params.join(':'));
   });
