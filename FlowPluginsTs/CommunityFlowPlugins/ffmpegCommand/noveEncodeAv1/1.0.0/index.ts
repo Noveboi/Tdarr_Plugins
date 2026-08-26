@@ -83,6 +83,16 @@ const details = () :IpluginDetails => ({
         type: 'switch',
       },
     },
+    {
+      label: 'Variance Boost',
+      name: 'varianceBoost',
+      tooltip: 'Increases the quality of low-contrast, dark areas in videos.',
+      defaultValue: 'false',
+      type: 'boolean',
+      inputUI: {
+        type: 'switch',
+      },
+    },
   ],
   outputs: [
     {
@@ -111,12 +121,15 @@ const convertToValidNumber = (
   return value;
 };
 
+const createParam = (name: string, value: unknown) => `${name}=${value}`;
+
 const plugin = ffMpegCommandPlugin(details, (args) => {
   const preset = convertToValidNumber(args.inputs.preset, 0, 13, 'Preset');
   const crf = convertToValidNumber(args.inputs.crf, 1, 70, 'CRF');
   const tune = convertToValidNumber(args.inputs.tune, 0, 5, 'Tune');
   const gop = convertToValidNumber(args.inputs.gop, 0.1, 100, 'GOP');
   const use10Bit = Boolean(args.inputs.bit10);
+  const useVarianceBoost = Boolean(args.inputs.varianceBoost);
 
   args.variables.ffmpegCommand.shouldProcess = true;
 
@@ -130,7 +143,17 @@ const plugin = ffMpegCommandPlugin(details, (args) => {
     stream.outputArgs.push('-preset', preset.toString());
     stream.outputArgs.push('-crf', crf.toString());
     stream.outputArgs.push('-pix_fmt', use10Bit ? 'yuv420p10le' : 'yuv420p');
-    stream.outputArgs.push('-svtav1-params', `tune=${tune}:keyint=${gop}s`);
+
+    const params = [
+      createParam('tune', tune),
+      createParam('keyint', `${gop}s`),
+    ];
+
+    if (useVarianceBoost) {
+      params.push(createParam('enable-variance-boost', 1));
+    }
+
+    stream.outputArgs.push('-svtav1-params', params.join(':'));
   });
 
   return {

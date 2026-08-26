@@ -78,6 +78,16 @@ var details = function () { return ({
                 type: 'switch',
             },
         },
+        {
+            label: 'Variance Boost',
+            name: 'varianceBoost',
+            tooltip: 'Increases the quality of low-contrast, dark areas in videos.',
+            defaultValue: 'false',
+            type: 'boolean',
+            inputUI: {
+                type: 'switch',
+            },
+        },
     ],
     outputs: [
         {
@@ -98,12 +108,14 @@ var convertToValidNumber = function (input, min, max, name, type) {
     }
     return value;
 };
+var createParam = function (name, value) { return "".concat(name, "=").concat(value); };
 var plugin = (0, ffmpeg_1.ffMpegCommandPlugin)(details, function (args) {
     var preset = convertToValidNumber(args.inputs.preset, 0, 13, 'Preset');
     var crf = convertToValidNumber(args.inputs.crf, 1, 70, 'CRF');
     var tune = convertToValidNumber(args.inputs.tune, 0, 5, 'Tune');
     var gop = convertToValidNumber(args.inputs.gop, 0.1, 100, 'GOP');
     var use10Bit = Boolean(args.inputs.bit10);
+    var useVarianceBoost = Boolean(args.inputs.varianceBoost);
     args.variables.ffmpegCommand.shouldProcess = true;
     var videoStreams = args.variables.ffmpegCommand.streams
         .filter(function (s) { return s.codec_type === ffmpeg_1.CodecType.VIDEO && s.codec_name !== 'mjpeg'; });
@@ -113,7 +125,14 @@ var plugin = (0, ffmpeg_1.ffMpegCommandPlugin)(details, function (args) {
         stream.outputArgs.push('-preset', preset.toString());
         stream.outputArgs.push('-crf', crf.toString());
         stream.outputArgs.push('-pix_fmt', use10Bit ? 'yuv420p10le' : 'yuv420p');
-        stream.outputArgs.push('-svtav1-params', "tune=".concat(tune, ":keyint=").concat(gop, "s"));
+        var params = [
+            createParam('tune', tune),
+            createParam('keyint', "".concat(gop, "s")),
+        ];
+        if (useVarianceBoost) {
+            params.push(createParam('enable-variance-boost', 1));
+        }
+        stream.outputArgs.push('-svtav1-params', params.join(':'));
     });
     return {
         outputFileObj: args.inputFileObj,
