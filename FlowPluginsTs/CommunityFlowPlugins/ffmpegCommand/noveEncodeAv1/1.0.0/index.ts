@@ -1,6 +1,7 @@
 /* eslint-disable no-param-reassign */
 import { IpluginDetails } from '../../../../FlowHelpers/1.0.0/interfaces/interfaces';
 import { CodecType, ffMpegCommandPlugin } from '../../../../FlowHelpers/1.0.0/nove/ffmpeg';
+import { convertToValidNumber } from '../../../../FlowHelpers/1.0.0/nove/utils';
 
 /* eslint no-plusplus: ["error", { "allowForLoopAfterthoughts": true }] */
 const details = () :IpluginDetails => ({
@@ -128,25 +129,6 @@ const details = () :IpluginDetails => ({
     },
   ],
 });
-
-const convertToValidNumber = (
-  input: unknown,
-  min: number,
-  max: number,
-  name: string,
-  type: 'integer' | 'float' = 'integer',
-): number => {
-  const valueAsString = String(input);
-  const value = type === 'integer'
-    ? Number.parseInt(valueAsString, 10)
-    : Number.parseFloat(valueAsString);
-
-  if (value < min || value > max) {
-    throw new Error(`Value ${value} for '${name}' is out of range. Expected [${min}-${max}]`);
-  }
-
-  return value;
-};
 
 const createParam = (name: string, value: unknown) => `${name}=${value}`;
 const boolToInt = (value: boolean) => (value ? 1 : 0);

@@ -57,3 +57,33 @@ export const getAvailableStreams = (streams: IffmpegCommandStream[], type: Codec
   const availableStreams = streams.filter((stream) => !stream.removed && stream.codec_type === type);
   return availableStreams;
 };
+
+/**
+ * Converts an unknown input to either an integer or float, whilst simultaneously ensuring the number is in a
+ * given range [min, max].
+ *
+ * The conversion is done in Base 10.
+ * @param input The value to convert
+ * @param min The minimum allowed number that the value can be (inclusive)
+ * @param max The maximum allowed number that the value can be (inclusive)
+ * @param name What the value is called
+ * @param type Is the value to be treated as an integer or a float? Default: integer
+ */
+export const convertToValidNumber = (
+  input: unknown,
+  min: number,
+  max: number,
+  name: string,
+  type: 'integer' | 'float' = 'integer',
+): number => {
+  const valueAsString = String(input);
+  const value = type === 'integer'
+    ? Number.parseInt(valueAsString, 10)
+    : Number.parseFloat(valueAsString);
+
+  if (value < min || value > max) {
+    throw new Error(`Value ${value} for '${name}' is out of range. Expected [${min}-${max}]`);
+  }
+
+  return value;
+};
