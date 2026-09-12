@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.plugin = exports.details = void 0;
 var ffmpeg_1 = require("../../../../FlowHelpers/1.0.0/nove/ffmpeg");
+var utils_1 = require("../../../../FlowHelpers/1.0.0/nove/utils");
 /* eslint no-plusplus: ["error", { "allowForLoopAfterthoughts": true }] */
 var details = function () { return ({
     name: 'AV1 Transcode',
@@ -121,25 +122,14 @@ var details = function () { return ({
     ],
 }); };
 exports.details = details;
-var convertToValidNumber = function (input, min, max, name, type) {
-    if (type === void 0) { type = 'integer'; }
-    var valueAsString = String(input);
-    var value = type === 'integer'
-        ? Number.parseInt(valueAsString, 10)
-        : Number.parseFloat(valueAsString);
-    if (value < min || value > max) {
-        throw new Error("Value ".concat(value, " for '").concat(name, "' is out of range. Expected [").concat(min, "-").concat(max, "]"));
-    }
-    return value;
-};
 var createParam = function (name, value) { return "".concat(name, "=").concat(value); };
 var boolToInt = function (value) { return (value ? 1 : 0); };
 var plugin = (0, ffmpeg_1.ffMpegCommandPlugin)(details, function (args) {
-    var preset = convertToValidNumber(args.inputs.preset, 0, 13, 'Preset');
-    var crf = convertToValidNumber(args.inputs.crf, 1, 70, 'CRF');
-    var tune = convertToValidNumber(args.inputs.tune, 0, 5, 'Tune');
-    var gop = convertToValidNumber(args.inputs.gop, 0.1, 100, 'GOP');
-    var sharpness = convertToValidNumber(args.inputs.sharpness, 0, 7, 'Sharpness');
+    var preset = (0, utils_1.convertToValidNumber)(args.inputs.preset, 0, 13, 'Preset');
+    var crf = (0, utils_1.convertToValidNumber)(args.inputs.crf, 1, 70, 'CRF');
+    var tune = (0, utils_1.convertToValidNumber)(args.inputs.tune, 0, 5, 'Tune');
+    var gop = (0, utils_1.convertToValidNumber)(args.inputs.gop, 0.1, 100, 'GOP');
+    var sharpness = (0, utils_1.convertToValidNumber)(args.inputs.sharpness, 0, 7, 'Sharpness');
     var use10Bit = Boolean(args.inputs.bit10);
     var useVarianceBoost = Boolean(args.inputs.varianceBoost);
     var useTemporalFiltering = Boolean(args.inputs.temporalFiltering);

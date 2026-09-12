@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.plugin = exports.details = void 0;
 var ffmpeg_1 = require("../../../../FlowHelpers/1.0.0/nove/ffmpeg");
+var utils_1 = require("../../../../FlowHelpers/1.0.0/nove/utils");
 /* eslint no-plusplus: ["error", { "allowForLoopAfterthoughts": true }] */
 var details = function () { return ({
     name: 'Process Audio',
@@ -17,18 +18,19 @@ var details = function () { return ({
     icon: '',
     inputs: [
         {
-            label: 'Encoder',
-            name: 'encoder',
-            tooltip: "Which audio encoder to use.\n\n      This operation will be applied to all available audio streams.",
-            defaultValue: 'aac',
+            label: 'Codec',
+            name: 'codec',
+            tooltip: "Which audio encoder to use.\n\n      This operation will be applied to all available audio streams.\n      If left blank, the audio streams will not be transcoded.",
+            defaultValue: '',
             type: 'string',
             inputUI: {
                 type: 'dropdown',
                 options: [
-                    'aac',
-                    'ac3',
-                    'eac3',
-                    'libopus',
+                    '',
+                    'AAC',
+                    'AC3',
+                    'E-AC3',
+                    'Opus',
                 ],
             },
         },
@@ -66,13 +68,49 @@ var details = function () { return ({
     ],
 }); };
 exports.details = details;
+var encoderMap = new Map([
+    ['AAC', 'aac'],
+    ['AC3', 'ac3'],
+    ['E-AC3', 'eac3'],
+    ['Opus', 'libopus'],
+]);
+var getEncoderFromCodecName = function (codec) {
+    var _a;
+    if (!codec) {
+        return null;
+    }
+    if (!encoderMap.has(codec)) {
+        throw new Error("Unknown codec name \"".concat(codec, "\""));
+    }
+    return (_a = encoderMap.get(codec)) !== null && _a !== void 0 ? _a : 'Uh oh!';
+};
 var plugin = (0, ffmpeg_1.ffMpegCommandPlugin)(details, function (args) {
-    var encoder = String(args.inputs.encoder);
-    var audioStreams = args.variables.ffmpegCommand.streams
-        .filter(function (stream) { return stream.codec_type === ffmpeg_1.CodecType.AUDIO; });
-    args.jobLog("Found ".concat(audioStreams.length, " audio streams"));
+    var codec = String(args.inputs.codec);
+    var targetChannels = (0, utils_1.convertToValidNumber)(args.inputs.channels, 0, 24, 'Desired Channel Count');
+    var encoder = getEncoderFromCodecName(codec);
+    var audioStreams = (0, utils_1.getAvailableStreams)(args.variables.ffmpegCommand.streams, ffmpeg_1.CodecType.AUDIO);
+    args.jobLog("Found ".concat(audioStreams.length, " audio stream(s)"));
+    // Main processing loop:
     audioStreams.forEach(function (stream) {
-        stream.outputArgs.push('-c:{outputIndex}', encoder);
+        var _a, _b, _c, _d;
+        args.jobLog("Processing: \"".concat((_b = (_a = stream.tags) === null || _a === void 0 ? void 0 : _a.title) !== null && _b !== void 0 ? _b : '?', "\""));
+        if (!stream.channels || stream.channels < 0) {
+            throw new Error("Invalid channel count for audio stream \"".concat((_d = (_c = stream.tags) === null || _c === void 0 ? void 0 : _c.title) !== null && _d !== void 0 ? _d : '?', "\""));
+        }
+        if (encoder) {
+            stream.outputArgs.push('-c:{outputIndex}', encoder);
+            args.jobLog("- Setting encoder to \"".concat(encoder, "\""));
+        }
+        else {
+            args.jobLog('- Not encoding');
+        }
+        if (targetChannels && targetChannels < stream.channels) {
+            stream.outputArgs.push('-ac:{outputIndex}', targetChannels.toString());
+            args.jobLog("- Setting channel count to ".concat(targetChannels, " (currently: ").concat(stream.channels, ")"));
+        }
+        else {
+            args.jobLog('- Keeping original channel count');
+        }
     });
     return {
         outputFileObj: args.inputFileObj,

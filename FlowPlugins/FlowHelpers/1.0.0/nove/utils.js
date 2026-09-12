@@ -3,7 +3,7 @@
 Shared/common utilities. This module should contain PURE functions!!!
 */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAvailableStreams = exports.containsKeywords = exports.parseCommaSeparatedValues = exports.isValidLanguageCode = exports.enumParser = exports.enumValues = void 0;
+exports.convertToValidNumber = exports.getAvailableStreams = exports.containsKeywords = exports.parseCommaSeparatedValues = exports.isValidLanguageCode = exports.enumParser = exports.enumValues = void 0;
 var types_1 = require("./types");
 var enumValues = function (type) {
     var values = Object.values(type);
@@ -55,3 +55,26 @@ var getAvailableStreams = function (streams, type) {
     return availableStreams;
 };
 exports.getAvailableStreams = getAvailableStreams;
+/**
+ * Converts an unknown input to either an integer or float, whilst simultaneously ensuring the number is in a
+ * given range [min, max].
+ *
+ * The conversion is done in Base 10.
+ * @param input The value to convert
+ * @param min The minimum allowed number that the value can be (inclusive)
+ * @param max The maximum allowed number that the value can be (inclusive)
+ * @param name What the value is called
+ * @param type Is the value to be treated as an integer or a float? Default: integer
+ */
+var convertToValidNumber = function (input, min, max, name, type) {
+    if (type === void 0) { type = 'integer'; }
+    var valueAsString = String(input);
+    var value = type === 'integer'
+        ? Number.parseInt(valueAsString, 10)
+        : Number.parseFloat(valueAsString);
+    if (value < min || value > max) {
+        throw new Error("Value ".concat(value, " for '").concat(name, "' is out of range. Expected [").concat(min, "-").concat(max, "]"));
+    }
+    return value;
+};
+exports.convertToValidNumber = convertToValidNumber;
