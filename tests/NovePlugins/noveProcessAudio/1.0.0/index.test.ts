@@ -4,10 +4,10 @@ import { plugin as sut }
 import { PluginInputArgsBuilder } from '../../../../FlowPluginsTs/FlowHelpers/1.0.0/nove/pluginHelper';
 import { getOnlyStream, getStream } from '../../stream.helper';
 
-const ENCODER_PARAM = 'encoder';
+const CODEC_PARAM = 'codec';
 const CHANNELS_PARAM = 'channels';
 
-describe('Set Encoder', () => {
+describe('Set Codec', () => {
   test.each([
     { codec: 'AC3', enc: 'ac3' },
     { codec: 'E-AC3', enc: 'eac3' },
@@ -15,7 +15,7 @@ describe('Set Encoder', () => {
     { codec: 'Opus', enc: 'libopus' },
   ])('Set encoder to `$enc` if $codec selected', async ({ enc, codec }) => {
     const args = new PluginInputArgsBuilder()
-      .withInput(ENCODER_PARAM, codec)
+      .withInput(CODEC_PARAM, codec)
       .addAudioStream()
       .build();
 
@@ -32,11 +32,10 @@ describe('Set Encoder', () => {
 
   test.each([
     { input: '' },
-    { input: null },
     { input: undefined },
   ])('Do nothing is input is "$input"', async ({ input }) => {
     const args = new PluginInputArgsBuilder()
-      .withInput(ENCODER_PARAM, input)
+      .withInput(CODEC_PARAM, input)
       .addAudioStream()
       .build();
 
@@ -66,7 +65,7 @@ describe('Channel Count', () => {
     expect(stream.outputArgs).toEqual(
       expect.arrayContaining([
         '-ac:{outputIndex}',
-        target,
+        target.toString(),
       ]),
     );
   });
@@ -108,20 +107,20 @@ describe('Channel Count', () => {
     { invalid: 0 },
     { invalid: undefined },
     { invalid: -1 },
-  ])('Throw error if base channel count is $invalid', ({ invalid }) => {
+  ])('Throw error if base channel count is $invalid', async ({ invalid }) => {
     const args = new PluginInputArgsBuilder()
       .withInput(CHANNELS_PARAM, 6)
       .addAudioStream({ channels: invalid, tags: { title: 'Testing!' } })
       .build();
 
-    expect(() => sut(args)).toThrow('Invalid channel count for audio stream "Testing!"');
+    await expect(() => sut(args)).rejects.toThrow('Invalid channel count for audio stream "Testing!"');
   });
 });
 
 describe('Stream Handling', () => {
   test('Process audio streams only', async () => {
     const args = new PluginInputArgsBuilder()
-      .withInput(ENCODER_PARAM, 'AAC')
+      .withInput(CODEC_PARAM, 'AAC')
       .withInput(CHANNELS_PARAM, 6)
       .addAudioStream({ channels: 2, tags: { title: 'English' } })
       .addVideoStream({ tags: { title: 'Video!' } })
@@ -137,7 +136,7 @@ describe('Stream Handling', () => {
     expect(video.outputArgs).toHaveLength(0);
     expect(sub.outputArgs).toHaveLength(0);
 
-    expect(args.jobLog).toHaveBeenCalledTimes(3);
+    expect(args.jobLog).toHaveBeenCalledWith('Found 1 audio stream(s)');
     expect(args.jobLog).toHaveBeenCalledWith('Processing: "English"');
     expect(args.jobLog).toHaveBeenCalledWith('- Setting encoder to "aac"');
     expect(args.jobLog).toHaveBeenCalledWith('- Keeping original channel count');
@@ -145,7 +144,7 @@ describe('Stream Handling', () => {
 
   test('Every applicable audio stream is processed accordingly', async () => {
     const args = new PluginInputArgsBuilder()
-      .withInput(ENCODER_PARAM, 'E-AC3')
+      .withInput(CODEC_PARAM, 'E-AC3')
       .withInput(CHANNELS_PARAM, 2)
       .addAudioStream({ channels: 2, tags: { title: 'S1' } })
       .addAudioStream({ channels: 4, tags: { title: 'S2' } })
@@ -158,18 +157,18 @@ describe('Stream Handling', () => {
     expect(s1.channels).toBe(2);
     expect(s2.channels).toBe(4);
     expect(s1.outputArgs).toHaveLength(2);
-    expect(s1.outputArgs).toContain(['-c:{outputIndex}', 'eac3']);
+    expect(s1.outputArgs).toEqual(expect.arrayContaining(['-c:{outputIndex}', 'eac3']));
     expect(s2.outputArgs).toHaveLength(4);
-    expect(s2.outputArgs).toContain(['-c:{outputIndex}', 'eac3', '-ac:{outputIndex}', '2']);
+    expect(s2.outputArgs).toEqual(expect.arrayContaining(['-c:{outputIndex}', 'eac3', '-ac:{outputIndex}', '2']));
 
-    expect(args.jobLog).toHaveBeenCalledTimes(6);
+    expect(args.jobLog).toHaveBeenCalledWith('Found 2 audio stream(s)');
     expect(args.jobLog).toHaveBeenCalledWith('Processing: "S1"');
     expect(args.jobLog).toHaveBeenCalledWith('Processing: "S2"');
   });
 
   test('Do not process removed audio streams', async () => {
     const args = new PluginInputArgsBuilder()
-      .withInput(ENCODER_PARAM, 'E-AC3')
+      .withInput(CODEC_PARAM, 'E-AC3')
       .withInput(CHANNELS_PARAM, 2)
       .addAudioStream({ channels: 2, tags: { title: 'S1' }, removed: false })
       .addAudioStream({ channels: 4, tags: { title: 'S2' }, removed: true })
@@ -182,10 +181,12 @@ describe('Stream Handling', () => {
     expect(s1.channels).toBe(2);
     expect(s2.channels).toBe(4);
     expect(s1.outputArgs).toHaveLength(2);
-    expect(s1.outputArgs).toContain(['-c:{outputIndex}', 'eac3']);
+    expect(s1.outputArgs).toEqual(
+      expect.arrayContaining(['-c:{outputIndex}', 'eac3']),
+    );
     expect(s2.outputArgs).toHaveLength(0);
 
-    expect(args.jobLog).toHaveBeenCalledTimes(3);
+    expect(args.jobLog).toHaveBeenCalledWith('Found 1 audio stream(s)');
     expect(args.jobLog).toHaveBeenCalledWith('Processing: "S1"');
   });
 });

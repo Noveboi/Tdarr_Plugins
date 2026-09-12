@@ -1,6 +1,7 @@
 /* eslint-disable no-param-reassign */
 import { IpluginDetails } from '../../../../FlowHelpers/1.0.0/interfaces/interfaces';
 import { CodecType, ffMpegCommandPlugin } from '../../../../FlowHelpers/1.0.0/nove/ffmpeg';
+import { convertToValidNumber, getAvailableStreams } from '../../../../FlowHelpers/1.0.0/nove/utils';
 
 /* eslint no-plusplus: ["error", { "allowForLoopAfterthoughts": true }] */
 const details = (): IpluginDetails => ({
@@ -17,20 +18,22 @@ const details = (): IpluginDetails => ({
   icon: '',
   inputs: [
     {
-      label: 'Encoder',
-      name: 'encoder',
+      label: 'Codec',
+      name: 'codec',
       tooltip: `Which audio encoder to use.
 
-      This operation will be applied to all available audio streams.`,
-      defaultValue: 'aac',
+      This operation will be applied to all available audio streams.
+      If left blank, the audio streams will not be transcoded.`,
+      defaultValue: '',
       type: 'string',
       inputUI: {
         type: 'dropdown',
         options: [
-          'aac',
-          'ac3',
-          'eac3',
-          'libopus',
+          '',
+          'AAC',
+          'AC3',
+          'E-AC3',
+          'Opus',
         ],
       },
     },
@@ -75,16 +78,55 @@ const details = (): IpluginDetails => ({
   ],
 });
 
+const encoderMap: Map<string, string> = new Map([
+  ['AAC', 'aac'],
+  ['AC3', 'ac3'],
+  ['E-AC3', 'eac3'],
+  ['Opus', 'libopus'],
+]);
+
+const getEncoderFromCodecName = (codec: string): string | null => {
+  if (!codec) {
+    return null;
+  }
+
+  if (!encoderMap.has(codec)) {
+    throw new Error(`Unknown codec name "${codec}"`);
+  }
+
+  return encoderMap.get(codec) ?? 'Uh oh!';
+};
+
 const plugin = ffMpegCommandPlugin(details, (args) => {
-  const encoder = String(args.inputs.encoder);
+  const codec = String(args.inputs.codec);
+  const targetChannels = convertToValidNumber(args.inputs.channels, 0, 24, 'Desired Channel Count');
 
-  const audioStreams = args.variables.ffmpegCommand.streams
-    .filter((stream) => stream.codec_type === CodecType.AUDIO);
+  const encoder = getEncoderFromCodecName(codec);
+  const audioStreams = getAvailableStreams(args.variables.ffmpegCommand.streams, CodecType.AUDIO);
 
-  args.jobLog(`Found ${audioStreams.length} audio streams`);
+  args.jobLog(`Found ${audioStreams.length} audio stream(s)`);
 
+  // Main processing loop:
   audioStreams.forEach((stream) => {
-    stream.outputArgs.push('-c:{outputIndex}', encoder);
+    args.jobLog(`Processing: "${stream.tags?.title ?? '?'}"`);
+
+    if (!stream.channels || stream.channels < 0) {
+      throw new Error(`Invalid channel count for audio stream "${stream.tags?.title ?? '?'}"`);
+    }
+
+    if (encoder) {
+      stream.outputArgs.push('-c:{outputIndex}', encoder);
+      args.jobLog(`- Setting encoder to "${encoder}"`);
+    } else {
+      args.jobLog('- Not encoding');
+    }
+
+    if (targetChannels && targetChannels < stream.channels) {
+      stream.outputArgs.push('-ac:{outputIndex}', targetChannels.toString());
+      args.jobLog(`- Setting channel count to ${targetChannels} (currently: ${stream.channels})`);
+    } else {
+      args.jobLog('- Keeping original channel count');
+    }
   });
 
   return {
