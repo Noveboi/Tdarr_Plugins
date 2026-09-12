@@ -2,6 +2,8 @@
 Shared/common utilities. This module should contain PURE functions!!!
 */
 
+import { IffmpegCommandStream } from '../interfaces/interfaces';
+import { CodecType } from './ffmpeg';
 import { err, ok, Result } from './types';
 
 export const enumValues = <const T extends Record<string, string>>(type: T): Array<T[keyof T]> => {
@@ -43,4 +45,15 @@ export const containsKeywords = (value: string | undefined, keywords: string[]):
 
   const cleanValue = value.toLowerCase();
   return keywords.some((keyword) => cleanValue.includes(keyword));
+};
+
+/**
+ * Filter the given stream collection to contain streams which are "available".
+ * "Available" means the stream is not flagged for removal.
+ * @param streams The input stream collection
+ * @param type The type of stream you want (e.g: Video, Audio, Subtitle)
+ */
+export const getAvailableStreams = (streams: IffmpegCommandStream[], type: CodecType): IffmpegCommandStream[] => {
+  const availableStreams = streams.filter((stream) => !stream.removed && stream.codec_type === type);
+  return availableStreams;
 };

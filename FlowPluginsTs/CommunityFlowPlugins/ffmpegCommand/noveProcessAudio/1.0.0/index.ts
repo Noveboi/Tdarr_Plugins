@@ -1,0 +1,100 @@
+/* eslint-disable no-param-reassign */
+import { IpluginDetails } from '../../../../FlowHelpers/1.0.0/interfaces/interfaces';
+import { CodecType, ffMpegCommandPlugin } from '../../../../FlowHelpers/1.0.0/nove/ffmpeg';
+
+/* eslint no-plusplus: ["error", { "allowForLoopAfterthoughts": true }] */
+const details = (): IpluginDetails => ({
+  name: 'Process Audio',
+  description: 'Process available audio streams and perform various operations on them, based on your preferences.',
+  style: {
+    borderColor: '#6efefc',
+  },
+  tags: 'audio',
+  isStartPlugin: false,
+  pType: '',
+  requiresVersion: '2.11.01',
+  sidebarPosition: -1,
+  icon: '',
+  inputs: [
+    {
+      label: 'Encoder',
+      name: 'encoder',
+      tooltip: `Which audio encoder to use.
+
+      This operation will be applied to all available audio streams.`,
+      defaultValue: 'aac',
+      type: 'string',
+      inputUI: {
+        type: 'dropdown',
+        options: [
+          'aac',
+          'ac3',
+          'eac3',
+          'libopus',
+        ],
+      },
+    },
+    {
+      label: 'Desired Channel Count',
+      name: 'channels',
+      tooltip: `The channel count that is most desirable for you. We call this the "target" count.
+
+      Every available audio stream will have its ("base") channel count examined.
+      - If the "base" channel count is higher than the "target" count, the channels will be reduced to match
+        the "target" count.
+      - If the "target" channel count is less than or equal to the "target" count, no-op.
+
+      Special value '0' can be used to skip channel count mapping.`,
+      defaultValue: '0',
+      type: 'number',
+      inputUI: {
+        type: 'dropdown',
+        options: [
+          // Determined with help from:
+          // https://trac.ffmpeg.org/wiki/AudioChannelManipulation#Mergedandmappedaudiochannels
+          '0', // no-op
+          '1', // mono
+          '2', // stereo | downmix
+          '3', // 2.1 | 3.0
+          '4', // 4.0 | quad | 3.1
+          '5', // 5.0 | 5.0(side) | 4.1
+          '6', // 5.1 | 5.1(side) | 6.0 | 6.0(front) | hexagonal
+          '7', // 6.1 | 6.1(back) | 6.1(front) | 7.0 | 7.0(front)
+          '8', // 7.1 | 7.1(wide) | 7.1(wide-side) | 7.1(top) | octagonal | cube
+          '16', // hexadecagonal
+          '24', // 22.2 (damn dude how many speakers do you need!!!!) (no offense btw)
+        ],
+      },
+    },
+  ],
+  outputs: [
+    {
+      number: 1,
+      tooltip: 'Inputs were successfully validated, continue to next plugin',
+    },
+  ],
+});
+
+const plugin = ffMpegCommandPlugin(details, (args) => {
+  const encoder = String(args.inputs.encoder);
+
+  const audioStreams = args.variables.ffmpegCommand.streams
+    .filter((stream) => stream.codec_type === CodecType.AUDIO);
+
+  args.jobLog(`Found ${audioStreams.length} audio streams`);
+
+  audioStreams.forEach((stream) => {
+    stream.outputArgs.push('-c:{outputIndex}', encoder);
+  });
+
+  return {
+    outputFileObj: args.inputFileObj,
+    outputNumber: 1,
+    variables: args.variables,
+  };
+});
+
+export {
+  details,
+  plugin,
+};

@@ -3,7 +3,7 @@
 Shared/common utilities. This module should contain PURE functions!!!
 */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.containsKeywords = exports.parseCommaSeparatedValues = exports.isValidLanguageCode = exports.enumParser = exports.enumValues = void 0;
+exports.getAvailableStreams = exports.containsKeywords = exports.parseCommaSeparatedValues = exports.isValidLanguageCode = exports.enumParser = exports.enumValues = void 0;
 var types_1 = require("./types");
 var enumValues = function (type) {
     var values = Object.values(type);
@@ -44,3 +44,14 @@ var containsKeywords = function (value, keywords) {
     return keywords.some(function (keyword) { return cleanValue.includes(keyword); });
 };
 exports.containsKeywords = containsKeywords;
+/**
+ * Filter the given stream collection to contain streams which are "available".
+ * "Available" means the stream is not flagged for removal.
+ * @param streams The input stream collection
+ * @param type The type of stream you want (e.g: Video, Audio, Subtitle)
+ */
+var getAvailableStreams = function (streams, type) {
+    var availableStreams = streams.filter(function (stream) { return !stream.removed && stream.codec_type === type; });
+    return availableStreams;
+};
+exports.getAvailableStreams = getAvailableStreams;
