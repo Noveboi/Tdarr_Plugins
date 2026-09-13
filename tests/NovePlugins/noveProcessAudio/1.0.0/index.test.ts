@@ -9,8 +9,8 @@ const CHANNELS_PARAM = 'channels';
 
 describe('Set Codec', () => {
   test.each([
-    { codec: 'AC3', enc: 'ac3' },
-    { codec: 'E-AC3', enc: 'eac3' },
+    { codec: 'AC-3', enc: 'ac3' },
+    { codec: 'E-AC-3', enc: 'eac3' },
     { codec: 'AAC', enc: 'aac' },
     { codec: 'Opus', enc: 'libopus' },
   ])('Set encoder to `$enc` if $codec selected', async ({ enc, codec }) => {
@@ -144,7 +144,7 @@ describe('Stream Handling', () => {
 
   test('Every applicable audio stream is processed accordingly', async () => {
     const args = new PluginInputArgsBuilder()
-      .withInput(CODEC_PARAM, 'E-AC3')
+      .withInput(CODEC_PARAM, 'E-AC-3')
       .withInput(CHANNELS_PARAM, 2)
       .addAudioStream({ channels: 2, tags: { title: 'S1' } })
       .addAudioStream({ channels: 4, tags: { title: 'S2' } })
@@ -168,7 +168,7 @@ describe('Stream Handling', () => {
 
   test('Do not process removed audio streams', async () => {
     const args = new PluginInputArgsBuilder()
-      .withInput(CODEC_PARAM, 'E-AC3')
+      .withInput(CODEC_PARAM, 'E-AC-3')
       .withInput(CHANNELS_PARAM, 2)
       .addAudioStream({ channels: 2, tags: { title: 'S1' }, removed: false })
       .addAudioStream({ channels: 4, tags: { title: 'S2' }, removed: true })
@@ -188,5 +188,22 @@ describe('Stream Handling', () => {
 
     expect(args.jobLog).toHaveBeenCalledWith('Found 1 audio stream(s)');
     expect(args.jobLog).toHaveBeenCalledWith('Processing: "S1"');
+  });
+});
+
+describe('Real world tests', () => {
+  test('8 Channels - E-AC-3', async () => {
+    const args = new PluginInputArgsBuilder()
+      .withInput(CHANNELS_PARAM, 6)
+      .addVideoStream({ codec_name: 'hevc', width: 1920, height: 1080 })
+      .addAudioStream({ codec_name: 'eac3', channels: 8 })
+      .build();
+
+    const result = await sut(args);
+    const audio = getStream(result, 1);
+
+    expect(audio.outputArgs).toEqual(expect.arrayContaining([
+      '-ac:{outputIndex}', '6',
+    ]));
   });
 });

@@ -31,8 +31,8 @@ const details = (): IpluginDetails => ({
         options: [
           '',
           'AAC',
-          'AC3',
-          'E-AC3',
+          'AC-3',
+          'E-AC-3',
           'Opus',
         ],
       },
@@ -80,8 +80,8 @@ const details = (): IpluginDetails => ({
 
 const encoderMap: Map<string, string> = new Map([
   ['AAC', 'aac'],
-  ['AC3', 'ac3'],
-  ['E-AC3', 'eac3'],
+  ['AC-3', 'ac3'],
+  ['E-AC-3', 'eac3'],
   ['Opus', 'libopus'],
 ]);
 
