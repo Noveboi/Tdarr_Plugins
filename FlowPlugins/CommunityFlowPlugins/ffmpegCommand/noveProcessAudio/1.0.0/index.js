@@ -59,6 +59,16 @@ var details = function () { return ({
                 ],
             },
         },
+        {
+            label: 'Ignore Codecs',
+            name: 'ignoredCodecs',
+            tooltip: "Specify a list of codecs that will be ignored in the encoder setting process.\n\n      The codecs you specify must be include in the dropdown in the 'codec' input.",
+            defaultValue: '',
+            type: 'string',
+            inputUI: {
+                type: 'text',
+            },
+        },
     ],
     outputs: [
         {
@@ -75,20 +85,24 @@ var encoderMap = new Map([
     ['Opus', 'libopus'],
 ]);
 var getEncoderFromCodecName = function (codec) {
-    var _a;
     if (!codec) {
         return null;
     }
-    if (!encoderMap.has(codec)) {
+    var encoder = encoderMap.get(codec);
+    if (!encoder) {
         throw new Error("Unknown codec name \"".concat(codec, "\""));
     }
-    return (_a = encoderMap.get(codec)) !== null && _a !== void 0 ? _a : 'Uh oh!';
+    return encoder;
 };
 var plugin = (0, ffmpeg_1.ffMpegCommandPlugin)(details, function (args) {
     var codec = String(args.inputs.codec);
     var targetChannels = (0, utils_1.convertToValidNumber)(args.inputs.channels, 0, 24, 'Desired Channel Count');
+    var ignoredCodecs = (0, utils_1.parseCommaSeparatedValues)(String(args.inputs.ignoredCodecs));
     var encoder = getEncoderFromCodecName(codec);
     var audioStreams = (0, utils_1.getAvailableStreams)(args.variables.ffmpegCommand.streams, ffmpeg_1.CodecType.AUDIO);
+    var ignoredEncoders = ignoredCodecs.length > 0
+        ? ignoredCodecs.map(getEncoderFromCodecName)
+        : undefined;
     args.jobLog("Found ".concat(audioStreams.length, " audio stream(s)"));
     // Main processing loop:
     audioStreams.forEach(function (stream) {
@@ -97,7 +111,7 @@ var plugin = (0, ffmpeg_1.ffMpegCommandPlugin)(details, function (args) {
         if (!stream.channels || stream.channels < 0) {
             throw new Error("Invalid channel count for audio stream \"".concat((_d = (_c = stream.tags) === null || _c === void 0 ? void 0 : _c.title) !== null && _d !== void 0 ? _d : '?', "\""));
         }
-        if (encoder) {
+        if (encoder && (!ignoredEncoders || !ignoredEncoders.includes(stream.codec_name))) {
             stream.outputArgs.push('-c:{outputIndex}', encoder);
             args.jobLog("- Setting encoder to \"".concat(encoder, "\""));
         }

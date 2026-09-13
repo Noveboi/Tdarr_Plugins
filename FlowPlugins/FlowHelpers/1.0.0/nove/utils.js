@@ -19,8 +19,16 @@ var enumParser = function (type) {
 exports.enumParser = enumParser;
 var isValidLanguageCode = function (code) { return code.length === 3; };
 exports.isValidLanguageCode = isValidLanguageCode;
+/**
+ * Convert a simple string to an array of values, separated by commas.
+ * @param value The input string
+ * @param lowercase If true, converts each value to lowercase.
+ */
 var parseCommaSeparatedValues = function (value, lowercase) {
     if (lowercase === void 0) { lowercase = false; }
+    if (!value) {
+        return [];
+    }
     return (lowercase
         ? value
             .split(',')
@@ -64,7 +72,7 @@ exports.getAvailableStreams = getAvailableStreams;
  * @param min The minimum allowed number that the value can be (inclusive)
  * @param max The maximum allowed number that the value can be (inclusive)
  * @param name What the value is called
- * @param type Is the value to be treated as an integer or a float? Default: integer
+ * @param type Is the value to bparseCommaSeparatedValuese treated as an integer or a float? Default: integer
  */
 var convertToValidNumber = function (input, min, max, name, type) {
     if (type === void 0) { type = 'integer'; }

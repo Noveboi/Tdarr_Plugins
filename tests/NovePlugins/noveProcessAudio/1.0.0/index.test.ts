@@ -4,6 +4,7 @@ import { plugin as sut }
 import { PluginInputArgsBuilder } from '../../../../FlowPluginsTs/FlowHelpers/1.0.0/nove/pluginHelper';
 import { getOnlyStream, getStream } from '../../stream.helper';
 
+const IGNORE_PARAM = 'ignoredCodecs';
 const CODEC_PARAM = 'codec';
 const CHANNELS_PARAM = 'channels';
 
@@ -114,6 +115,40 @@ describe('Channel Count', () => {
       .build();
 
     await expect(() => sut(args)).rejects.toThrow('Invalid channel count for audio stream "Testing!"');
+  });
+});
+
+// Users can specify certain codecs that they don't want the plugin to consider.
+// This is useful if you don't want to transcode ALL codecs to a target codec.
+describe('Ignoring Certain Codecs', () => {
+  test('Do not set encoder if base codec is ignored', async () => {
+    const args = new PluginInputArgsBuilder()
+      .withInput(CODEC_PARAM, 'AAC')
+      .withInput(IGNORE_PARAM, 'E-AC-3')
+      .addAudioStream({ codec_name: 'eac3' })
+      .build();
+
+    const result = await sut(args);
+    const audio = getOnlyStream(result);
+
+    expect(audio.outputArgs).toHaveLength(0);
+  });
+
+  test('Set channels even if base codec is ignored', async () => {
+    const args = new PluginInputArgsBuilder()
+      .withInput(CODEC_PARAM, 'AAC')
+      .withInput(IGNORE_PARAM, 'E-AC-3')
+      .withInput(CHANNELS_PARAM, 6)
+      .addAudioStream({ codec_name: 'eac3', channels: 8 })
+      .build();
+
+    const result = await sut(args);
+    const audio = getOnlyStream(result);
+
+    expect(audio.outputArgs).toHaveLength(2);
+    expect(audio.outputArgs).toEqual(expect.arrayContaining([
+      '-ac:{outputIndex}', '6',
+    ]));
   });
 });
 

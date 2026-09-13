@@ -1,7 +1,8 @@
 /* eslint-disable no-param-reassign */
 import { IpluginDetails } from '../../../../FlowHelpers/1.0.0/interfaces/interfaces';
 import { CodecType, ffMpegCommandPlugin } from '../../../../FlowHelpers/1.0.0/nove/ffmpeg';
-import { convertToValidNumber, getAvailableStreams } from '../../../../FlowHelpers/1.0.0/nove/utils';
+import { convertToValidNumber, getAvailableStreams, parseCommaSeparatedValues }
+  from '../../../../FlowHelpers/1.0.0/nove/utils';
 
 /* eslint no-plusplus: ["error", { "allowForLoopAfterthoughts": true }] */
 const details = (): IpluginDetails => ({
@@ -69,6 +70,18 @@ const details = (): IpluginDetails => ({
         ],
       },
     },
+    {
+      label: 'Ignore Codecs',
+      name: 'ignoredCodecs',
+      tooltip: `Specify a list of codecs that will be ignored in the encoder setting process.
+
+      The codecs you specify must be include in the dropdown in the 'codec' input.`,
+      defaultValue: '',
+      type: 'string',
+      inputUI: {
+        type: 'text',
+      },
+    },
   ],
   outputs: [
     {
@@ -90,19 +103,25 @@ const getEncoderFromCodecName = (codec: string): string | null => {
     return null;
   }
 
-  if (!encoderMap.has(codec)) {
+  const encoder = encoderMap.get(codec);
+
+  if (!encoder) {
     throw new Error(`Unknown codec name "${codec}"`);
   }
 
-  return encoderMap.get(codec) ?? 'Uh oh!';
+  return encoder;
 };
 
 const plugin = ffMpegCommandPlugin(details, (args) => {
   const codec = String(args.inputs.codec);
   const targetChannels = convertToValidNumber(args.inputs.channels, 0, 24, 'Desired Channel Count');
+  const ignoredCodecs = parseCommaSeparatedValues(String(args.inputs.ignoredCodecs));
 
   const encoder = getEncoderFromCodecName(codec);
   const audioStreams = getAvailableStreams(args.variables.ffmpegCommand.streams, CodecType.AUDIO);
+  const ignoredEncoders = ignoredCodecs.length > 0
+    ? ignoredCodecs.map(getEncoderFromCodecName)
+    : undefined;
 
   args.jobLog(`Found ${audioStreams.length} audio stream(s)`);
 
@@ -114,7 +133,7 @@ const plugin = ffMpegCommandPlugin(details, (args) => {
       throw new Error(`Invalid channel count for audio stream "${stream.tags?.title ?? '?'}"`);
     }
 
-    if (encoder) {
+    if (encoder && (!ignoredEncoders || !ignoredEncoders.includes(stream.codec_name))) {
       stream.outputArgs.push('-c:{outputIndex}', encoder);
       args.jobLog(`- Setting encoder to "${encoder}"`);
     } else {

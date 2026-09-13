@@ -23,14 +23,25 @@ export const enumParser = <const T extends Record<string, string>>(
 
 export const isValidLanguageCode = (code: string): boolean => code.length === 3;
 
-export const parseCommaSeparatedValues = (value: string, lowercase = false): string[] => (lowercase
-  ? value
-    .split(',')
-    .map((val) => val.trim().toLowerCase())
-  : value
-    .split(',')
-    .map((val) => val.trim())
-);
+/**
+ * Convert a simple string to an array of values, separated by commas.
+ * @param value The input string
+ * @param lowercase If true, converts each value to lowercase.
+ */
+export const parseCommaSeparatedValues = (value: string, lowercase = false): string[] => {
+  if (!value) {
+    return [];
+  }
+
+  return (lowercase
+    ? value
+      .split(',')
+      .map((val) => val.trim().toLowerCase())
+    : value
+      .split(',')
+      .map((val) => val.trim())
+  );
+};
 
 /**
  * Find one or more keywords in the given value.
@@ -67,7 +78,7 @@ export const getAvailableStreams = (streams: IffmpegCommandStream[], type: Codec
  * @param min The minimum allowed number that the value can be (inclusive)
  * @param max The maximum allowed number that the value can be (inclusive)
  * @param name What the value is called
- * @param type Is the value to be treated as an integer or a float? Default: integer
+ * @param type Is the value to bparseCommaSeparatedValuese treated as an integer or a float? Default: integer
  */
 export const convertToValidNumber = (
   input: unknown,
