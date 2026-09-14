@@ -21,7 +21,7 @@ const details = (): IpluginDetails => ({
     {
       label: 'Codec',
       name: 'codec',
-      tooltip: `Which audio encoder to use.
+      tooltip: `Which audio codec to use.
 
       This operation will be applied to all available audio streams.
       If left blank, the audio streams will not be transcoded.`,
