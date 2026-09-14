@@ -7,7 +7,7 @@ import { convertToValidNumber, getAvailableStreams, parseCommaSeparatedValues }
 /* eslint no-plusplus: ["error", { "allowForLoopAfterthoughts": true }] */
 const details = (): IpluginDetails => ({
   name: 'Process Audio',
-  description: 'Process available audio streams and perform various operations on them, based on your preferences.',
+  description: 'Process available audio streams and perform various operations on them based on your preferences.',
   style: {
     borderColor: '#6efefc',
   },

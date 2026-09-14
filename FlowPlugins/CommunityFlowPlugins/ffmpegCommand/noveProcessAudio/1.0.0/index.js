@@ -20,7 +20,7 @@ var details = function () { return ({
         {
             label: 'Codec',
             name: 'codec',
-            tooltip: "Which audio encoder to use.\n\n      This operation will be applied to all available audio streams.\n      If left blank, the audio streams will not be transcoded.",
+            tooltip: "Which audio codec to use.\n\n      This operation will be applied to all available audio streams.\n      If left blank, the audio streams will not be transcoded.",
             defaultValue: '',
             type: 'string',
             inputUI: {
