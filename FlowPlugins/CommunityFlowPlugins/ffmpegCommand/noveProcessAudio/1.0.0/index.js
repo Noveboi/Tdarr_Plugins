@@ -6,7 +6,7 @@ var utils_1 = require("../../../../FlowHelpers/1.0.0/nove/utils");
 /* eslint no-plusplus: ["error", { "allowForLoopAfterthoughts": true }] */
 var details = function () { return ({
     name: 'Process Audio',
-    description: 'Process available audio streams and perform various operations on them, based on your preferences.',
+    description: 'Process available audio streams and perform various operations on them based on your preferences.',
     style: {
         borderColor: '#6efefc',
     },
@@ -20,7 +20,7 @@ var details = function () { return ({
         {
             label: 'Codec',
             name: 'codec',
-            tooltip: "Which audio codec to use.\n\n      This operation will be applied to all available audio streams.\n      If left blank, the audio streams will not be transcoded.",
+            tooltip: "Which audio codec to use. The encoder implementation (e.g: libopus) is\n      chosen automatically for you.\n\n      This operation will be applied to all available audio streams.\n      If left blank, the audio streams will not be transcoded.",
             defaultValue: '',
             type: 'string',
             inputUI: {
