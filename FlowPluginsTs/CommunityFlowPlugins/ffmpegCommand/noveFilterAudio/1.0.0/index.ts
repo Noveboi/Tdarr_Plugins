@@ -78,7 +78,7 @@ const hasLanguage = (stream: IffmpegCommandStream, languages: LanguageSet, optim
     return languages.contain(stream.tags?.language);
   }
 
-  return !stream.tags?.language || stream.tags.language === 'und';
+  return languages.contain(stream.tags?.language) || !stream.tags?.language || stream.tags.language === 'und';
 };
 
 const plugin = ffMpegCommandPlugin(details, (args) => {

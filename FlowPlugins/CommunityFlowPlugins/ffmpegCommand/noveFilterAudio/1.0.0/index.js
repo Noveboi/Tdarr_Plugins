@@ -81,11 +81,11 @@ var details = function () { return ({
 }); };
 exports.details = details;
 var hasLanguage = function (stream, languages, optimistic) {
-    var _a, _b;
+    var _a, _b, _c;
     if (!optimistic) {
         return languages.contain((_a = stream.tags) === null || _a === void 0 ? void 0 : _a.language);
     }
-    return !((_b = stream.tags) === null || _b === void 0 ? void 0 : _b.language) || stream.tags.language === 'und';
+    return languages.contain((_b = stream.tags) === null || _b === void 0 ? void 0 : _b.language) || !((_c = stream.tags) === null || _c === void 0 ? void 0 : _c.language) || stream.tags.language === 'und';
 };
 var plugin = (0, ffmpeg_1.ffMpegCommandPlugin)(details, function (args) {
     var languagesResult = languages_1.default.from((0, utils_1.parseCommaSeparatedValues)(String(args.inputs.languages)), {

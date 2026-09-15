@@ -216,4 +216,16 @@ describe('Optimistic/Pessimistic Behavior', () => {
 
     expect(result.outputNumber).toBe(1);
   });
+
+  test('Return "success" if optimistic and stream language exists in tags', async () => {
+    const args = new PluginInputArgsBuilder()
+      .withInput('languages', 'eng')
+      .withInput('optimistic', 'true')
+      .addAudioStream({ tags: { language: 'eng' } })
+      .build();
+
+    const result = await plugin(args);
+
+    expect(result.outputNumber).toBe(1);
+  });
 });
