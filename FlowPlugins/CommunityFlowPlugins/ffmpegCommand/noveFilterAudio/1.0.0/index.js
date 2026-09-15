@@ -53,6 +53,16 @@ var details = function () { return ({
                 type: 'text',
             },
         },
+        {
+            label: 'Undefined = Original?',
+            name: 'optimistic',
+            tooltip: "If true, the plugin considers audio streams with an undefined language (i.e: no language given)\n      as having the original language. Otherwise, the undefined language is treated as a separate language.",
+            defaultValue: 'false',
+            type: 'boolean',
+            inputUI: {
+                type: 'switch',
+            },
+        },
     ],
     outputs: [
         {
@@ -70,11 +80,19 @@ var details = function () { return ({
     ],
 }); };
 exports.details = details;
+var hasLanguage = function (stream, languages, optimistic) {
+    var _a, _b;
+    if (!optimistic) {
+        return languages.contain((_a = stream.tags) === null || _a === void 0 ? void 0 : _a.language);
+    }
+    return !((_b = stream.tags) === null || _b === void 0 ? void 0 : _b.language) || stream.tags.language === 'und';
+};
 var plugin = (0, ffmpeg_1.ffMpegCommandPlugin)(details, function (args) {
     var languagesResult = languages_1.default.from((0, utils_1.parseCommaSeparatedValues)(String(args.inputs.languages)), {
         acceptEmptyList: true,
     });
     var keywords = (0, utils_1.parseCommaSeparatedValues)(String(args.inputs.keywords), true);
+    var optimistic = (0, utils_1.parseBoolean)(args.inputs.optimistic);
     if (!languagesResult.ok) {
         throw new Error(languagesResult.error);
     }
@@ -84,11 +102,9 @@ var plugin = (0, ffmpeg_1.ffMpegCommandPlugin)(details, function (args) {
         args.jobLog("Got ".concat(languages.length, " languages to keep: [").concat(languages.toString(), "]"));
     }
     args.jobLog("Got ".concat(keywords.length, " keywords to blacklist: [").concat(keywords.join(', '), "]"));
-    var audioStreams = command.streams
-        .filter(function (stream) { return stream.codec_type === 'audio'; });
+    var audioStreams = command.streams.filter(function (stream) { return stream.codec_type === ffmpeg_1.CodecType.AUDIO; });
     var streamsToExcludeLanguage = languages.length > 0
-        ? audioStreams
-            .filter(function (stream) { var _a; return !languages.contain((_a = stream.tags) === null || _a === void 0 ? void 0 : _a.language); })
+        ? audioStreams.filter(function (stream) { return !hasLanguage(stream, languages, optimistic); })
         : [];
     if (streamsToExcludeLanguage.length === audioStreams.length) {
         args.jobLog("Current media does not contain audio streams with languages: ".concat(languages.toString()));

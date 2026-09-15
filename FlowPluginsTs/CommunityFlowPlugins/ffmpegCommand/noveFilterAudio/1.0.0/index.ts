@@ -1,9 +1,9 @@
 /* eslint-disable no-param-reassign */
-import { IpluginDetails } from '../../../../FlowHelpers/1.0.0/interfaces/interfaces';
-import { ffMpegCommandPlugin } from '../../../../FlowHelpers/1.0.0/nove/ffmpeg';
+import { IffmpegCommandStream, IpluginDetails } from '../../../../FlowHelpers/1.0.0/interfaces/interfaces';
+import { CodecType, ffMpegCommandPlugin } from '../../../../FlowHelpers/1.0.0/nove/ffmpeg';
 import LanguageSet from '../../../../FlowHelpers/1.0.0/nove/languages';
 import {
-  containsKeywords, parseCommaSeparatedValues,
+  containsKeywords, parseBoolean, parseCommaSeparatedValues,
 } from '../../../../FlowHelpers/1.0.0/nove/utils';
 
 const OUT_SUCCESS = 1;
@@ -45,6 +45,17 @@ const details = () :IpluginDetails => ({
         type: 'text',
       },
     },
+    {
+      label: 'Undefined = Original?',
+      name: 'optimistic',
+      tooltip: `If true, the plugin considers audio streams with an undefined language (i.e: no language given)
+      as having the original language. Otherwise, the undefined language is treated as a separate language.`,
+      defaultValue: 'false',
+      type: 'boolean',
+      inputUI: {
+        type: 'switch',
+      },
+    },
   ],
   outputs: [
     {
@@ -62,19 +73,27 @@ const details = () :IpluginDetails => ({
   ],
 });
 
+const hasLanguage = (stream: IffmpegCommandStream, languages: LanguageSet, optimistic: boolean) => {
+  if (!optimistic) {
+    return languages.contain(stream.tags?.language);
+  }
+
+  return !stream.tags?.language || stream.tags.language === 'und';
+};
+
 const plugin = ffMpegCommandPlugin(details, (args) => {
   const languagesResult = LanguageSet.from(parseCommaSeparatedValues(String(args.inputs.languages)), {
     acceptEmptyList: true,
   });
 
   const keywords = parseCommaSeparatedValues(String(args.inputs.keywords), true);
+  const optimistic = parseBoolean(args.inputs.optimistic);
 
   if (!languagesResult.ok) {
     throw new Error(languagesResult.error);
   }
 
   const languages = languagesResult.value;
-
   const command = args.variables.ffmpegCommand;
 
   if (languages.length > 0) {
@@ -83,12 +102,10 @@ const plugin = ffMpegCommandPlugin(details, (args) => {
 
   args.jobLog(`Got ${keywords.length} keywords to blacklist: [${keywords.join(', ')}]`);
 
-  const audioStreams = command.streams
-    .filter((stream) => stream.codec_type === 'audio');
+  const audioStreams = command.streams.filter((stream) => stream.codec_type === CodecType.AUDIO);
 
   const streamsToExcludeLanguage = languages.length > 0
-    ? audioStreams
-      .filter((stream) => !languages.contain(stream.tags?.language))
+    ? audioStreams.filter((stream) => !hasLanguage(stream, languages, optimistic))
     : [];
 
   if (streamsToExcludeLanguage.length === audioStreams.length) {

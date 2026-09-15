@@ -1,9 +1,11 @@
 "use strict";
 /*
-Shared/common utilities. This module should contain PURE functions!!!
+Shared/common utilities.
+
+This module should contain PURE functions!!!
 */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.convertToValidNumber = exports.getAvailableStreams = exports.containsKeywords = exports.parseCommaSeparatedValues = exports.isValidLanguageCode = exports.enumParser = exports.enumValues = void 0;
+exports.parseBoolean = exports.convertToValidNumber = exports.getAvailableStreams = exports.containsKeywords = exports.parseCommaSeparatedValues = exports.isValidLanguageCode = exports.enumParser = exports.enumValues = void 0;
 var types_1 = require("./types");
 var enumValues = function (type) {
     var values = Object.values(type);
@@ -17,7 +19,10 @@ var enumParser = function (type) {
         : (0, types_1.err)("No member for ".concat(value))); };
 };
 exports.enumParser = enumParser;
-var isValidLanguageCode = function (code) { return code.length === 3; };
+/**
+ * Ensures a string is valid for an ffmpeg-style language code.
+ */
+var isValidLanguageCode = function (value) { return value.length === 3; };
 exports.isValidLanguageCode = isValidLanguageCode;
 /**
  * Convert a simple string to an array of values, separated by commas.
@@ -86,3 +91,24 @@ var convertToValidNumber = function (input, min, max, name, type) {
     return value;
 };
 exports.convertToValidNumber = convertToValidNumber;
+/**
+ * Parse a value into a boolean.
+ * This method is strict and will throw if the value is unexpected.
+ *
+ * `true` for: 1, 'true'.
+ *
+ * `false` for: 0, 'false', `undefined`, `null`
+ */
+var parseBoolean = function (value) {
+    if (!value) {
+        return false;
+    }
+    if (value === true || value === 1 || value === 'true') {
+        return true;
+    }
+    if (value === 'false') {
+        return false;
+    }
+    throw new Error("Unknown value '".concat(value, "'"));
+};
+exports.parseBoolean = parseBoolean;
