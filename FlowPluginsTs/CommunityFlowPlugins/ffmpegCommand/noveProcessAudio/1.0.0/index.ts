@@ -1,7 +1,7 @@
 /* eslint-disable no-param-reassign */
 import { IpluginDetails } from '../../../../FlowHelpers/1.0.0/interfaces/interfaces';
 import { CodecType, ffMpegCommandPlugin } from '../../../../FlowHelpers/1.0.0/nove/ffmpeg';
-import { convertToValidNumber, getAvailableStreams, parseCommaSeparatedValues }
+import { parseNumber, getAvailableStreams, parseCommaSeparatedValues }
   from '../../../../FlowHelpers/1.0.0/nove/utils';
 
 /* eslint no-plusplus: ["error", { "allowForLoopAfterthoughts": true }] */
@@ -115,7 +115,7 @@ const getEncoderFromCodecName = (codec: string): string | null => {
 
 const plugin = ffMpegCommandPlugin(details, (args) => {
   const codec = String(args.inputs.codec);
-  const targetChannels = convertToValidNumber(args.inputs.channels, 0, 24, 'Desired Channel Count');
+  const targetChannels = parseNumber(args.inputs.channels, { min: 0, max: 24, name: 'Desired Channel Count' });
   const ignoredCodecs = parseCommaSeparatedValues(String(args.inputs.ignoredCodecs));
 
   const encoder = getEncoderFromCodecName(codec);

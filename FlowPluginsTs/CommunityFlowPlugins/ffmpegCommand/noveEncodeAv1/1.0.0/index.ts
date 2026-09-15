@@ -1,7 +1,7 @@
 /* eslint-disable no-param-reassign */
 import { IpluginDetails } from '../../../../FlowHelpers/1.0.0/interfaces/interfaces';
 import { CodecType, ffMpegCommandPlugin } from '../../../../FlowHelpers/1.0.0/nove/ffmpeg';
-import { convertToValidNumber } from '../../../../FlowHelpers/1.0.0/nove/utils';
+import { parseNumber } from '../../../../FlowHelpers/1.0.0/nove/utils';
 
 /* eslint no-plusplus: ["error", { "allowForLoopAfterthoughts": true }] */
 const details = () :IpluginDetails => ({
@@ -134,11 +134,11 @@ const createParam = (name: string, value: unknown) => `${name}=${value}`;
 const boolToInt = (value: boolean) => (value ? 1 : 0);
 
 const plugin = ffMpegCommandPlugin(details, (args) => {
-  const preset = convertToValidNumber(args.inputs.preset, 0, 13, 'Preset');
-  const crf = convertToValidNumber(args.inputs.crf, 1, 70, 'CRF');
-  const tune = convertToValidNumber(args.inputs.tune, 0, 5, 'Tune');
-  const gop = convertToValidNumber(args.inputs.gop, 0.1, 100, 'GOP');
-  const sharpness = convertToValidNumber(args.inputs.sharpness, 0, 7, 'Sharpness');
+  const preset = parseNumber(args.inputs.preset, { min: 0, max: 13, name: 'Preset' });
+  const crf = parseNumber(args.inputs.crf, { min: 1, max: 70, name: 'CRF' });
+  const tune = parseNumber(args.inputs.tune, { min: 0, max: 5, name: 'Tune' });
+  const gop = parseNumber(args.inputs.gop, { min: 0.1, max: 100, name: 'GOP' });
+  const sharpness = parseNumber(args.inputs.sharpness, { min: 0, max: 7, name: 'Sharpness' });
 
   const use10Bit = Boolean(args.inputs.bit10);
   const useVarianceBoost = Boolean(args.inputs.varianceBoost);
