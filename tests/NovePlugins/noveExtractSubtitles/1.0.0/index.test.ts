@@ -6,7 +6,7 @@ import {
 } from '../../../../FlowPluginsTs/CommunityFlowPlugins/subtitles/noveExtractEmbeddedSubtitles/1.0.0/index';
 import { CLI } from '../../../../FlowPluginsTs/FlowHelpers/1.0.0/cliUtils';
 
-import { PluginInputArgsBuilder } from '../../../../FlowPluginsTs/FlowHelpers/1.0.0/nove/pluginHelper';
+import { PluginInputArgsBuilder } from '../../pluginHelper';
 import { BitmapHandling } from '../../../../FlowPluginsTs/FlowHelpers/1.0.0/nove/subtitles';
 
 jest.mock('../../../../FlowPluginsTs/FlowHelpers/1.0.0/cliUtils', () => ({

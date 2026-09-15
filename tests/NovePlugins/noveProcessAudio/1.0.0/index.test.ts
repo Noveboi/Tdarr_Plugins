@@ -1,7 +1,7 @@
 import { plugin as sut }
   from '../../../../FlowPluginsTs/CommunityFlowPlugins/ffmpegCommand/noveProcessAudio/1.0.0/index';
 
-import { PluginInputArgsBuilder } from '../../../../FlowPluginsTs/FlowHelpers/1.0.0/nove/pluginHelper';
+import { PluginInputArgsBuilder } from '../../pluginHelper';
 import { getOnlyStream, getStream } from '../../stream.helper';
 
 const IGNORE_PARAM = 'ignoredCodecs';

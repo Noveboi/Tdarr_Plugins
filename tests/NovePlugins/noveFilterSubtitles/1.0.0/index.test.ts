@@ -1,5 +1,5 @@
 import { plugin } from '../../../../FlowPluginsTs/CommunityFlowPlugins/ffmpegCommand/noveFilterSubtitles/1.0.0/index';
-import { PluginInputArgsBuilder } from '../../../../FlowPluginsTs/FlowHelpers/1.0.0/nove/pluginHelper';
+import { PluginInputArgsBuilder } from '../../pluginHelper';
 
 /*
 Due to the similar nature of the `filterSubtitles` and `filterAudio` plugins,

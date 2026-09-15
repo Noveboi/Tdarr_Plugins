@@ -3,9 +3,9 @@
 
 import type {
   IFileObject,
-} from '../interfaces/synced/IFileObject';
+} from '../../FlowPluginsTs/FlowHelpers/1.0.0/interfaces/synced/IFileObject';
 
-import type Ijob from '../interfaces/synced/jobInterface';
+import type Ijob from '../../FlowPluginsTs/FlowHelpers/1.0.0/interfaces/synced/jobInterface';
 
 import type {
   IconfigVars,
@@ -14,7 +14,7 @@ import type {
   IpluginInputArgs,
   IupdateWorker,
   Ivariables,
-} from '../interfaces/interfaces';
+} from '../../FlowPluginsTs/FlowHelpers/1.0.0/interfaces/interfaces';
 
 type StreamOverrides = Partial<IffmpegCommandStream>;
 

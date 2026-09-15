@@ -1,5 +1,5 @@
 import { plugin } from '../../../../FlowPluginsTs/CommunityFlowPlugins/ffmpegCommand/noveEncodeAv1/1.0.0/index';
-import { PluginInputArgsBuilder } from '../../../../FlowPluginsTs/FlowHelpers/1.0.0/nove/pluginHelper';
+import { PluginInputArgsBuilder } from '../../pluginHelper';
 
 describe('AV1 Encoding', () => {
   describe('Parameters', () => {

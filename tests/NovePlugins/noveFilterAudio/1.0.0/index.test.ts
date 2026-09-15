@@ -1,5 +1,5 @@
 import { plugin } from '../../../../FlowPluginsTs/CommunityFlowPlugins/ffmpegCommand/noveFilterAudio/1.0.0/index';
-import { PluginInputArgsBuilder } from '../../../../FlowPluginsTs/FlowHelpers/1.0.0/nove/pluginHelper';
+import { PluginInputArgsBuilder } from '../../pluginHelper';
 
 describe('Standard Behavior', () => {
   it('should discard unwanted languages when stream with target language exists', async () => {
