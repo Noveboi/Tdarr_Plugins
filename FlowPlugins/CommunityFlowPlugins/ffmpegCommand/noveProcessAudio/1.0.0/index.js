@@ -111,16 +111,22 @@ var plugin = (0, ffmpeg_1.ffMpegCommandPlugin)(details, function (args) {
         if (!stream.channels || stream.channels < 0) {
             throw new Error("Invalid channel count for audio stream \"".concat((_d = (_c = stream.tags) === null || _c === void 0 ? void 0 : _c.title) !== null && _d !== void 0 ? _d : '?', "\""));
         }
-        if (encoder && (!ignoredEncoders || !ignoredEncoders.includes(stream.codec_name))) {
-            stream.outputArgs.push('-c:{outputIndex}', encoder);
+        var shouldEncode = encoder && (!ignoredEncoders || !ignoredEncoders.includes(stream.codec_name));
+        if (shouldEncode) {
             args.jobLog("- Setting encoder to \"".concat(encoder, "\""));
+            stream.outputArgs.push('-c:{outputIndex}', encoder);
         }
         else {
             args.jobLog('- Not encoding');
         }
         if (targetChannels && targetChannels < stream.channels) {
-            stream.outputArgs.push('-ac:{outputIndex}', targetChannels.toString());
             args.jobLog("- Setting channel count to ".concat(targetChannels, " (currently: ").concat(stream.channels, ")"));
+            stream.outputArgs.push('-ac:{outputIndex}', targetChannels.toString());
+            // Explicitly add the -c argument using the stream's original codec.
+            if (!shouldEncode) {
+                args.jobLog("- Explicitly setting encoder to stream's '".concat(stream.codec_name, "' "));
+                stream.outputArgs.push('-c:{outputIndex}', stream.codec_name);
+            }
         }
         else {
             args.jobLog('- Keeping original channel count');

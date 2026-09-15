@@ -134,16 +134,24 @@ const plugin = ffMpegCommandPlugin(details, (args) => {
       throw new Error(`Invalid channel count for audio stream "${stream.tags?.title ?? '?'}"`);
     }
 
-    if (encoder && (!ignoredEncoders || !ignoredEncoders.includes(stream.codec_name))) {
-      stream.outputArgs.push('-c:{outputIndex}', encoder);
+    const shouldEncode = encoder && (!ignoredEncoders || !ignoredEncoders.includes(stream.codec_name));
+
+    if (shouldEncode) {
       args.jobLog(`- Setting encoder to "${encoder}"`);
+      stream.outputArgs.push('-c:{outputIndex}', encoder);
     } else {
       args.jobLog('- Not encoding');
     }
 
     if (targetChannels && targetChannels < stream.channels) {
-      stream.outputArgs.push('-ac:{outputIndex}', targetChannels.toString());
       args.jobLog(`- Setting channel count to ${targetChannels} (currently: ${stream.channels})`);
+      stream.outputArgs.push('-ac:{outputIndex}', targetChannels.toString());
+
+      // Explicitly add the -c argument using the stream's original codec.
+      if (!shouldEncode) {
+        args.jobLog(`- Explicitly setting encoder to stream's '${stream.codec_name}' `);
+        stream.outputArgs.push('-c:{outputIndex}', stream.codec_name);
+      }
     } else {
       args.jobLog('- Keeping original channel count');
     }

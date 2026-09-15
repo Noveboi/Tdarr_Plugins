@@ -23,6 +23,7 @@ describe('Set Codec', () => {
     const result = await sut(args);
     const stream = getOnlyStream(result);
 
+    expect(stream.outputArgs).toHaveLength(2);
     expect(stream.outputArgs).toEqual(
       expect.arrayContaining([
         '-c:{outputIndex}',
@@ -63,6 +64,7 @@ describe('Channel Count', () => {
     const stream = getOnlyStream(result);
 
     expect(stream.channels).toBe(base);
+    expect(stream.outputArgs).toHaveLength(4);
     expect(stream.outputArgs).toEqual(
       expect.arrayContaining([
         '-ac:{outputIndex}',
@@ -116,6 +118,22 @@ describe('Channel Count', () => {
 
     await expect(() => sut(args)).rejects.toThrow('Invalid channel count for audio stream "Testing!"');
   });
+
+  test('Explicitly set codec when setting channel count', async () => {
+    const args = new PluginInputArgsBuilder()
+      .withInput(CHANNELS_PARAM, 6)
+      .addAudioStream({ channels: 8, codec_name: 'eac3' })
+      .build();
+
+    const result = await sut(args);
+    const stream = getOnlyStream(result);
+
+    expect(stream.outputArgs).toHaveLength(4);
+    expect(stream.outputArgs).toEqual(expect.arrayContaining([
+      '-c:{outputIndex}', 'eac3',
+      '-ac:{outputIndex}', '6',
+    ]));
+  });
 });
 
 // Users can specify certain codecs that they don't want the plugin to consider.
@@ -145,7 +163,7 @@ describe('Ignoring Certain Codecs', () => {
     const result = await sut(args);
     const audio = getOnlyStream(result);
 
-    expect(audio.outputArgs).toHaveLength(2);
+    expect(audio.outputArgs).toHaveLength(4); // 4 because of explicit codec spec when setting channels
     expect(audio.outputArgs).toEqual(expect.arrayContaining([
       '-ac:{outputIndex}', '6',
     ]));
