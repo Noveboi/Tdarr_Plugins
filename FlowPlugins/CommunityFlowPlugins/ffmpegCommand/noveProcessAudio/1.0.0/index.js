@@ -96,7 +96,7 @@ var getEncoderFromCodecName = function (codec) {
 };
 var plugin = (0, ffmpeg_1.ffMpegCommandPlugin)(details, function (args) {
     var codec = String(args.inputs.codec);
-    var targetChannels = (0, utils_1.convertToValidNumber)(args.inputs.channels, 0, 24, 'Desired Channel Count');
+    var targetChannels = (0, utils_1.parseNumber)(args.inputs.channels, { min: 0, max: 24, name: 'Desired Channel Count' });
     var ignoredCodecs = (0, utils_1.parseCommaSeparatedValues)(String(args.inputs.ignoredCodecs));
     var encoder = getEncoderFromCodecName(codec);
     var audioStreams = (0, utils_1.getAvailableStreams)(args.variables.ffmpegCommand.streams, ffmpeg_1.CodecType.AUDIO);

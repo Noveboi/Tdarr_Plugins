@@ -5,7 +5,7 @@ Shared/common utilities.
 This module should contain PURE functions!!!
 */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseBoolean = exports.convertToValidNumber = exports.getAvailableStreams = exports.containsKeywords = exports.parseCommaSeparatedValues = exports.isValidLanguageCode = exports.enumParser = exports.enumValues = void 0;
+exports.parseBoolean = exports.parseNumber = exports.getAvailableStreams = exports.containsKeywords = exports.parseCommaSeparatedValues = exports.isValidLanguageCode = exports.enumParser = exports.enumValues = void 0;
 var types_1 = require("./types");
 var enumValues = function (type) {
     var values = Object.values(type);
@@ -31,7 +31,7 @@ exports.isValidLanguageCode = isValidLanguageCode;
  */
 var parseCommaSeparatedValues = function (value, lowercase) {
     if (lowercase === void 0) { lowercase = false; }
-    if (!value) {
+    if (!(value === null || value === void 0 ? void 0 : value.trim())) {
         return [];
     }
     return (lowercase
@@ -50,8 +50,11 @@ exports.parseCommaSeparatedValues = parseCommaSeparatedValues;
  * @returns `true` if one or more keywords are present in the value. `false` otherwise.
  */
 var containsKeywords = function (value, keywords) {
-    if (!value) {
+    if (!(value === null || value === void 0 ? void 0 : value.trim())) {
         return false;
+    }
+    if (keywords.length === 0) {
+        return true;
     }
     var cleanValue = value.toLowerCase();
     return keywords.some(function (keyword) { return cleanValue.includes(keyword); });
@@ -64,33 +67,55 @@ exports.containsKeywords = containsKeywords;
  * @param type The type of stream you want (e.g: Video, Audio, Subtitle)
  */
 var getAvailableStreams = function (streams, type) {
-    var availableStreams = streams.filter(function (stream) { return !stream.removed && stream.codec_type === type; });
+    if (type === void 0) { type = undefined; }
+    var availableStreams = streams.filter(function (stream) { return !stream.removed && (!type || stream.codec_type === type); });
     return availableStreams;
 };
 exports.getAvailableStreams = getAvailableStreams;
+var formatValidRange = function (min, max) {
+    if (min === undefined && max === undefined) {
+        return '[-∞, +∞]';
+    }
+    if (min === undefined) {
+        return "[-\u221E, ".concat(max, "]");
+    }
+    if (max === undefined) {
+        return "[".concat(min, ", +\u221E]");
+    }
+    return "[".concat(min, ", ").concat(max, "]");
+};
 /**
  * Converts an unknown input to either an integer or float, whilst simultaneously ensuring the number is in a
  * given range [min, max].
  *
  * The conversion is done in Base 10.
  * @param input The value to convert
- * @param min The minimum allowed number that the value can be (inclusive)
- * @param max The maximum allowed number that the value can be (inclusive)
- * @param name What the value is called
- * @param type Is the value to bparseCommaSeparatedValuese treated as an integer or a float? Default: integer
+ * @param options Various options that further specify the format and validity of the output.
  */
-var convertToValidNumber = function (input, min, max, name, type) {
-    if (type === void 0) { type = 'integer'; }
-    var valueAsString = String(input);
+var parseNumber = function (input, options) {
+    var _a;
+    if (options === void 0) { options = {}; }
+    if (input === undefined || input === null) {
+        throw new Error('Undefined values are not allowed');
+    }
+    var type = (_a = options.type) !== null && _a !== void 0 ? _a : 'integer';
+    var min = options.min, max = options.max, name = options.name;
+    var valueAsString = String(input).trim();
+    if (valueAsString === '') {
+        throw new Error('Empty strings are not allowed');
+    }
     var value = type === 'integer'
         ? Number.parseInt(valueAsString, 10)
         : Number.parseFloat(valueAsString);
-    if (value < min || value > max) {
-        throw new Error("Value ".concat(value, " for '").concat(name, "' is out of range. Expected [").concat(min, "-").concat(max, "]"));
+    if ((min !== undefined && value < min) || (max !== undefined && value > max)) {
+        var variableName = name
+            ? " for '".concat(name, "'")
+            : '';
+        throw new Error("Value ".concat(value).concat(variableName, " is out of range: ").concat(formatValidRange(min, max)));
     }
     return value;
 };
-exports.convertToValidNumber = convertToValidNumber;
+exports.parseNumber = parseNumber;
 /**
  * Parse a value into a boolean.
  * This method is strict and will throw if the value is unexpected.

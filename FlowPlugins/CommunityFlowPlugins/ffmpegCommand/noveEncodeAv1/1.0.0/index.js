@@ -125,11 +125,11 @@ exports.details = details;
 var createParam = function (name, value) { return "".concat(name, "=").concat(value); };
 var boolToInt = function (value) { return (value ? 1 : 0); };
 var plugin = (0, ffmpeg_1.ffMpegCommandPlugin)(details, function (args) {
-    var preset = (0, utils_1.convertToValidNumber)(args.inputs.preset, 0, 13, 'Preset');
-    var crf = (0, utils_1.convertToValidNumber)(args.inputs.crf, 1, 70, 'CRF');
-    var tune = (0, utils_1.convertToValidNumber)(args.inputs.tune, 0, 5, 'Tune');
-    var gop = (0, utils_1.convertToValidNumber)(args.inputs.gop, 0.1, 100, 'GOP');
-    var sharpness = (0, utils_1.convertToValidNumber)(args.inputs.sharpness, 0, 7, 'Sharpness');
+    var preset = (0, utils_1.parseNumber)(args.inputs.preset, { min: 0, max: 13, name: 'Preset' });
+    var crf = (0, utils_1.parseNumber)(args.inputs.crf, { min: 1, max: 70, name: 'CRF' });
+    var tune = (0, utils_1.parseNumber)(args.inputs.tune, { min: 0, max: 5, name: 'Tune' });
+    var gop = (0, utils_1.parseNumber)(args.inputs.gop, { min: 0.1, max: 100, name: 'GOP' });
+    var sharpness = (0, utils_1.parseNumber)(args.inputs.sharpness, { min: 0, max: 7, name: 'Sharpness' });
     var use10Bit = Boolean(args.inputs.bit10);
     var useVarianceBoost = Boolean(args.inputs.varianceBoost);
     var useTemporalFiltering = Boolean(args.inputs.temporalFiltering);
