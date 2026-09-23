@@ -134,7 +134,9 @@ const plugin = ffMpegCommandPlugin(details, (args) => {
       throw new Error(`Invalid channel count for audio stream "${stream.tags?.title ?? '?'}"`);
     }
 
-    const shouldEncode = encoder && (!ignoredEncoders || !ignoredEncoders.includes(stream.codec_name));
+    const shouldEncode = encoder
+      && encoder !== stream.codec_name
+      && (!ignoredEncoders || !ignoredEncoders.includes(stream.codec_name));
 
     if (shouldEncode) {
       args.jobLog(`- Setting encoder to "${encoder}"`);

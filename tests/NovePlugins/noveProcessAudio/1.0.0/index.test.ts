@@ -46,6 +46,19 @@ describe('Set Codec', () => {
 
     expect(stream.outputArgs).toHaveLength(0);
   });
+
+  // 2026-09-23 - A bug was found where an AAC stream meeting all requirements would be re-encoded into AAC
+  test('Do not set encoder when codecs match', async () => {
+    const args = new PluginInputArgsBuilder()
+      .withInput(CODEC_PARAM, 'AAC')
+      .addAudioStream({ codec_name: 'aac' })
+      .build();
+
+    const result = await sut(args);
+    const stream = getOnlyStream(result);
+
+    expect(stream.outputArgs).toHaveLength(0);
+  });
 });
 
 describe('Channel Count', () => {

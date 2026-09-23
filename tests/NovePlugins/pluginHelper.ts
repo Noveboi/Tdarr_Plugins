@@ -47,7 +47,7 @@ export const videoStream = (overrides: StreamOverrides = {}): IffmpegCommandStre
 
 export const audioStream = (overrides: StreamOverrides = {}): IffmpegCommandStream => ({
   index: 0,
-  codec_name: 'aac',
+  codec_name: 'test',
   codec_type: 'audio',
   channels: 2,
   sample_rate: '48000',

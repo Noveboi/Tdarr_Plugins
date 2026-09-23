@@ -111,7 +111,9 @@ var plugin = (0, ffmpeg_1.ffMpegCommandPlugin)(details, function (args) {
         if (!stream.channels || stream.channels < 0) {
             throw new Error("Invalid channel count for audio stream \"".concat((_d = (_c = stream.tags) === null || _c === void 0 ? void 0 : _c.title) !== null && _d !== void 0 ? _d : '?', "\""));
         }
-        var shouldEncode = encoder && (!ignoredEncoders || !ignoredEncoders.includes(stream.codec_name));
+        var shouldEncode = encoder
+            && encoder !== stream.codec_name
+            && (!ignoredEncoders || !ignoredEncoders.includes(stream.codec_name));
         if (shouldEncode) {
             args.jobLog("- Setting encoder to \"".concat(encoder, "\""));
             stream.outputArgs.push('-c:{outputIndex}', encoder);
