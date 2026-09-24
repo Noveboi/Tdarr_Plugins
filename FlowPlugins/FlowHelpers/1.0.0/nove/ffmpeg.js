@@ -43,6 +43,7 @@ exports.CodecType = {
     VIDEO: 'video',
     AUDIO: 'audio',
     SUBTITLE: 'subtitle',
+    DATA: 'data'
 };
 var ffMpegCommandPlugin = function (details, callback) { return function (args) { return __awaiter(void 0, void 0, void 0, function () {
     var lib, callbackResult;

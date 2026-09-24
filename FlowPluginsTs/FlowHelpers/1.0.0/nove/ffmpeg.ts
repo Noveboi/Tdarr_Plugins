@@ -6,6 +6,7 @@ export const CodecType = {
   VIDEO: 'video',
   AUDIO: 'audio',
   SUBTITLE: 'subtitle',
+  DATA: 'data'
 } as const;
 
 export type CodecType = typeof CodecType[keyof typeof CodecType];
