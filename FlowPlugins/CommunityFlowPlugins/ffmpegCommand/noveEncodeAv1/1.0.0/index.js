@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.plugin = exports.details = void 0;
 var ffmpeg_1 = require("../../../../FlowHelpers/1.0.0/nove/ffmpeg");
+var types_1 = require("../../../../FlowHelpers/1.0.0/nove/types");
 var utils_1 = require("../../../../FlowHelpers/1.0.0/nove/utils");
 /* eslint no-plusplus: ["error", { "allowForLoopAfterthoughts": true }] */
 var details = function () { return ({
@@ -21,7 +22,7 @@ var details = function () { return ({
             label: 'Preset',
             name: 'preset',
             tooltip: "The encoder preset. Values range from 0 to 13. Higher preset values means faster encodes,\n      with a quality tradeoff. For archivalit is recommended to use values between 3 and 6",
-            defaultValue: '5',
+            defaultValue: '6',
             type: 'number',
             inputUI: {
                 type: 'slider',
@@ -63,7 +64,7 @@ var details = function () { return ({
             label: 'GOP Interval',
             name: 'gop',
             tooltip: "The interval in seconds after which an I-frame (keyframe) is inserted. Frequent keyframes\n      are useful for precise and fast seekability, but at the cost of reduced compression efficiency. For movies/TV,\n      it is recommended to use 5-10 seconds",
-            defaultValue: '5',
+            defaultValue: '10',
             type: 'number',
             inputUI: {
                 type: 'text',
@@ -119,24 +120,47 @@ var details = function () { return ({
             number: 1,
             tooltip: 'Inputs were successfully validated, continue to next plugin',
         },
+        {
+            number: 2,
+            tooltip: 'Found suspicious stream information, require review',
+        },
     ],
 }); };
 exports.details = details;
 var createParam = function (name, value) { return "".concat(name, "=").concat(value); };
 var boolToInt = function (value) { return (value ? 1 : 0); };
+var checkForSuspiciousStreams = function (args, streams) {
+    // Check: More than one video stream?
+    if (streams.length > 1) {
+        args.jobLog('SUSPICIOUS: File has more than one video streams');
+        streams.forEach(function (s) {
+            var _a;
+            args.jobLog("- \"".concat((_a = s.tags) === null || _a === void 0 ? void 0 : _a.title, "\", ").concat(s.codec_name, ", ").concat(s.width, "x").concat(s.height));
+        });
+        return (0, types_1.err)('More than one video stream');
+    }
+    return (0, types_1.ok)(undefined);
+};
 var plugin = (0, ffmpeg_1.ffMpegCommandPlugin)(details, function (args) {
     var preset = (0, utils_1.parseNumber)(args.inputs.preset, { min: 0, max: 13, name: 'Preset' });
     var crf = (0, utils_1.parseNumber)(args.inputs.crf, { min: 1, max: 70, name: 'CRF' });
     var tune = (0, utils_1.parseNumber)(args.inputs.tune, { min: 0, max: 5, name: 'Tune' });
     var gop = (0, utils_1.parseNumber)(args.inputs.gop, { min: 0.1, max: 100, name: 'GOP' });
     var sharpness = (0, utils_1.parseNumber)(args.inputs.sharpness, { min: 0, max: 7, name: 'Sharpness' });
-    var use10Bit = Boolean(args.inputs.bit10);
-    var useVarianceBoost = Boolean(args.inputs.varianceBoost);
-    var useTemporalFiltering = Boolean(args.inputs.temporalFiltering);
+    var use10Bit = (0, utils_1.parseBoolean)(args.inputs.bit10);
+    var useVarianceBoost = (0, utils_1.parseBoolean)(args.inputs.varianceBoost);
+    var useTemporalFiltering = (0, utils_1.parseBoolean)(args.inputs.temporalFiltering);
     args.variables.ffmpegCommand.shouldProcess = true;
-    var videoStreams = args.variables.ffmpegCommand.streams
-        .filter(function (s) { return s.codec_type === ffmpeg_1.CodecType.VIDEO && s.codec_name !== 'mjpeg'; });
+    var videoStreams = (0, utils_1.getAvailableStreams)(args.variables.ffmpegCommand.streams, ffmpeg_1.CodecType.VIDEO);
     args.jobLog("Found ".concat(videoStreams.length, " video streams"));
+    var checkResult = checkForSuspiciousStreams(args, videoStreams);
+    if (!checkResult.ok) {
+        return {
+            outputNumber: 2,
+            outputFileObj: args.inputFileObj,
+            variables: args.variables,
+        };
+    }
     videoStreams.forEach(function (stream) {
         stream.outputArgs.push('-c:{outputIndex}', 'libsvtav1');
         stream.outputArgs.push('-preset', preset.toString());

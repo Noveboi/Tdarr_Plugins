@@ -1,7 +1,10 @@
 /* eslint-disable no-param-reassign */
-import { IpluginDetails } from '../../../../FlowHelpers/1.0.0/interfaces/interfaces';
+import {
+  IffmpegCommandStream, IpluginDetails, IpluginInputArgs,
+} from '../../../../FlowHelpers/1.0.0/interfaces/interfaces';
 import { CodecType, ffMpegCommandPlugin } from '../../../../FlowHelpers/1.0.0/nove/ffmpeg';
-import { parseNumber } from '../../../../FlowHelpers/1.0.0/nove/utils';
+import { err, ok, Result } from '../../../../FlowHelpers/1.0.0/nove/types';
+import { getAvailableStreams, parseBoolean, parseNumber } from '../../../../FlowHelpers/1.0.0/nove/utils';
 
 /* eslint no-plusplus: ["error", { "allowForLoopAfterthoughts": true }] */
 const details = () :IpluginDetails => ({
@@ -22,7 +25,7 @@ const details = () :IpluginDetails => ({
       name: 'preset',
       tooltip: `The encoder preset. Values range from 0 to 13. Higher preset values means faster encodes,
       with a quality tradeoff. For archivalit is recommended to use values between 3 and 6`,
-      defaultValue: '5',
+      defaultValue: '6',
       type: 'number',
       inputUI: {
         type: 'slider',
@@ -68,7 +71,7 @@ const details = () :IpluginDetails => ({
       tooltip: `The interval in seconds after which an I-frame (keyframe) is inserted. Frequent keyframes
       are useful for precise and fast seekability, but at the cost of reduced compression efficiency. For movies/TV,
       it is recommended to use 5-10 seconds`,
-      defaultValue: '5',
+      defaultValue: '10',
       type: 'number',
       inputUI: {
         type: 'text',
@@ -127,11 +130,29 @@ const details = () :IpluginDetails => ({
       number: 1,
       tooltip: 'Inputs were successfully validated, continue to next plugin',
     },
+    {
+      number: 2,
+      tooltip: 'Found suspicious stream information, require review',
+    },
   ],
 });
 
 const createParam = (name: string, value: unknown) => `${name}=${value}`;
 const boolToInt = (value: boolean) => (value ? 1 : 0);
+
+const checkForSuspiciousStreams = (args: IpluginInputArgs, streams: IffmpegCommandStream[]): Result => {
+  // Check: More than one video stream?
+  if (streams.length > 1) {
+    args.jobLog('SUSPICIOUS: File has more than one video streams');
+    streams.forEach((s) => {
+      args.jobLog(`- "${s.tags?.title}", ${s.codec_name}, ${s.width}x${s.height}`);
+    });
+
+    return err('More than one video stream');
+  }
+
+  return ok(undefined);
+};
 
 const plugin = ffMpegCommandPlugin(details, (args) => {
   const preset = parseNumber(args.inputs.preset, { min: 0, max: 13, name: 'Preset' });
@@ -140,16 +161,25 @@ const plugin = ffMpegCommandPlugin(details, (args) => {
   const gop = parseNumber(args.inputs.gop, { min: 0.1, max: 100, name: 'GOP' });
   const sharpness = parseNumber(args.inputs.sharpness, { min: 0, max: 7, name: 'Sharpness' });
 
-  const use10Bit = Boolean(args.inputs.bit10);
-  const useVarianceBoost = Boolean(args.inputs.varianceBoost);
-  const useTemporalFiltering = Boolean(args.inputs.temporalFiltering);
+  const use10Bit = parseBoolean(args.inputs.bit10);
+  const useVarianceBoost = parseBoolean(args.inputs.varianceBoost);
+  const useTemporalFiltering = parseBoolean(args.inputs.temporalFiltering);
 
   args.variables.ffmpegCommand.shouldProcess = true;
 
-  const videoStreams = args.variables.ffmpegCommand.streams
-    .filter((s) => s.codec_type === CodecType.VIDEO && s.codec_name !== 'mjpeg');
+  const videoStreams = getAvailableStreams(args.variables.ffmpegCommand.streams, CodecType.VIDEO);
 
   args.jobLog(`Found ${videoStreams.length} video streams`);
+
+  const checkResult = checkForSuspiciousStreams(args, videoStreams);
+
+  if (!checkResult.ok) {
+    return {
+      outputNumber: 2,
+      outputFileObj: args.inputFileObj,
+      variables: args.variables,
+    };
+  }
 
   videoStreams.forEach((stream) => {
     stream.outputArgs.push('-c:{outputIndex}', 'libsvtav1');
