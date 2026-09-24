@@ -2,7 +2,6 @@ import {
   plugin as sut,
 } from '../../../../FlowPluginsTs/CommunityFlowPlugins/ffmpegCommand/noveRemoveData/1.0.0/index';
 import { PluginInputArgsBuilder } from '../../pluginHelper';
-import { getStream } from '../../stream.helper';
 
 describe('Removal', () => {
   test('Remove all "data" streams', async () => {
